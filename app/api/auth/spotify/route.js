@@ -5,10 +5,7 @@ const SPOTIFY_REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI;
 
 export async function GET() {
   const scopes = [
-    'user-read-playback-state',
-    'user-modify-playback-state',
     'playlist-read-private',
-    'streaming',
     'user-read-email',
     'user-read-private'
   ].join(' ');

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import SpotifyPlayer from '@/components/SpotifyPlayer';
 import YouTubePlayer from '@/components/YouTubePlayer';
 import PlaylistSync from '@/components/PlaylistSync';
 import { Music, PlayCircle } from 'lucide-react';
@@ -89,8 +88,7 @@ function DashboardContent() {
         </div>
       ) : (
         <div>
-          <div className="dashboard-grid">
-            <SpotifyPlayer token={spotifyToken} />
+          <div style={{ marginBottom: '24px', height: '400px' }}>
             <YouTubePlayer videoId={previewYtId} />
           </div>
           <div className="sync-container">
