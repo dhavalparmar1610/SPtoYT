@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { PlayCircle } from 'lucide-react';
+import { PlayCircle, SkipBack, SkipForward, Play as PlayIcon, Pause, Shuffle, Repeat } from 'lucide-react';
 
 export default function YouTubePlayer({ videoId, playlistId, onPlayerReady }) {
   const playerRef = useRef(null);
   const [player, setPlayer] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [isRepeat, setIsRepeat] = useState(false);
 
   useEffect(() => {
     if (!window.YT) {
@@ -43,24 +46,29 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady }) {
     }
 
     function onPlayerStateChange(event) {
-      if (event.data === window.YT.PlayerState.PLAYING && 'mediaSession' in navigator) {
-        const data = event.target.getVideoData();
-        if (data && data.title) {
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: data.title,
-            artist: data.author || 'YouTube Music',
-            artwork: [
-              { src: `https://i.ytimg.com/vi/${data.video_id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
-            ]
-          });
+      if (event.data === window.YT.PlayerState.PLAYING) {
+        setIsPlaying(true);
+        if ('mediaSession' in navigator) {
+          const data = event.target.getVideoData();
+          if (data && data.title) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: data.title,
+              artist: data.author || 'YouTube Music',
+              artwork: [
+                { src: `https://i.ytimg.com/vi/${data.video_id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
+              ]
+            });
 
-          navigator.mediaSession.setActionHandler('previoustrack', () => {
-            event.target.previousVideo();
-          });
-          navigator.mediaSession.setActionHandler('nexttrack', () => {
-            event.target.nextVideo();
-          });
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+              event.target.previousVideo();
+            });
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+              event.target.nextVideo();
+            });
+          }
         }
+      } else if (event.data === window.YT.PlayerState.PAUSED || event.data === window.YT.PlayerState.ENDED) {
+        setIsPlaying(false);
       }
     }
   }, []);
@@ -97,6 +105,55 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady }) {
             <p style={{fontSize: '0.9rem', marginTop: '8px'}}>Sync a playlist to see preview here.</p>
           </div>
         )}
+      </div>
+
+      <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', padding: '16px 0 0 0'}}>
+        <button 
+          onClick={() => {
+            const newState = !isShuffle;
+            setIsShuffle(newState);
+            if (player) player.setShuffle(newState);
+          }}
+          style={{background: 'none', border: 'none', color: isShuffle ? 'var(--spotify-green)' : '#888', cursor: 'pointer', display: 'flex'}}
+        >
+          <Shuffle size={20} />
+        </button>
+        
+        <button 
+          onClick={() => player && player.previousVideo()}
+          style={{background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex'}}
+        >
+          <SkipBack size={24} />
+        </button>
+        
+        <button 
+          onClick={() => {
+            if (!player) return;
+            if (isPlaying) player.pauseVideo();
+            else player.playVideo();
+          }}
+          style={{background: 'white', border: 'none', color: 'black', borderRadius: '50%', padding: '12px', cursor: 'pointer', display: 'flex'}}
+        >
+          {isPlaying ? <Pause size={24} fill="black" /> : <PlayIcon size={24} fill="black" />}
+        </button>
+        
+        <button 
+          onClick={() => player && player.nextVideo()}
+          style={{background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex'}}
+        >
+          <SkipForward size={24} />
+        </button>
+        
+        <button 
+          onClick={() => {
+            const newState = !isRepeat;
+            setIsRepeat(newState);
+            if (player) player.setLoop(newState);
+          }}
+          style={{background: 'none', border: 'none', color: isRepeat ? 'var(--spotify-green)' : '#888', cursor: 'pointer', display: 'flex'}}
+        >
+          <Repeat size={20} />
+        </button>
       </div>
     </div>
   );
