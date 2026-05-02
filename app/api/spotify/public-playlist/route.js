@@ -41,56 +41,53 @@ async function fetchPlaylistViaEmbed(playlistId) {
   });
 
   const html = res.data;
-  
-  // Look for the JSON payload in the script tag
-  const match = html.match(/<script id="resource" type="application\/json">(.+?)<\/script>/);
-  if (!match) {
-    // Try the __NEXT_DATA__ format
-    const nextMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
-    if (!nextMatch) throw new Error('Could not find playlist data in embed page');
-    
-    const data = JSON.parse(nextMatch[1]);
-    const playlist = data.props?.pageProps?.state?.data?.entity || {};
-    const items = playlist.tracks?.items || [];
-    
-    const tracks = items.map(item => ({
-      name: item.title || item.name || item.track?.name,
-      artist: item.subtitle || item.artist || item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
-      album: item.album?.name || '',
-      albumArt: item.album?.images?.[0]?.url || item.image?.[0]?.url || null,
-      duration_ms: item.duration || item.duration_ms || 0,
-    })).filter(t => t.name) || [];
+  let entity = null;
 
-    return {
-      playlist: {
-        id: playlistId,
-        name: playlist.name || 'Spotify Playlist',
-        description: playlist.description || '',
-        image: playlist.images?.[0]?.url || null,
-        totalTracks: playlist.tracks?.total || tracks.length,
-      },
-      tracks
-    };
+  // Try parsing from the 'resource' script tag (common in Embeds)
+  const resourceMatch = html.match(/<script id="resource" type="application\/json">(.+?)<\/script>/);
+  if (resourceMatch) {
+    try {
+      const data = JSON.parse(resourceMatch[1]);
+      // Sometimes it's the entity itself, sometimes it's nested
+      entity = data.props?.pageProps?.state?.data?.entity || data;
+    } catch (e) {}
   }
 
-  const data = JSON.parse(match[1]);
-  const items = data.tracks?.items || [];
+  // Try parsing from '__NEXT_DATA__' (common in newer Spotify pages)
+  if (!entity || !entity.name) {
+    const nextMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
+    if (nextMatch) {
+      try {
+        const data = JSON.parse(nextMatch[1]);
+        entity = data.props?.pageProps?.state?.data?.entity || data.props?.pageProps?.state?.data || {};
+      } catch (e) {}
+    }
+  }
+
+  if (!entity || (!entity.name && !entity.title)) throw new Error('Could not find playlist data in embed page');
+
+  // Spotify Embeds use 'trackList' instead of 'tracks.items'
+  // And they use 'title'/'subtitle' instead of 'name'/'artist'
+  const rawTracks = entity.trackList || entity.tracks?.items || entity.items || [];
   
-  const tracks = items.map(item => ({
-    name: item.title || item.name || item.track?.name,
-    artist: item.subtitle || item.artist || item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
-    album: item.album?.name || '',
-    albumArt: item.album?.images?.[0]?.url || item.image?.[0]?.url || null,
-    duration_ms: item.duration || item.duration_ms || 0,
-  })).filter(t => t.name) || [];
+  const tracks = rawTracks.map(item => {
+    const trackObj = item.track || item;
+    return {
+      name: trackObj.title || trackObj.name || 'Unknown Track',
+      artist: trackObj.subtitle || trackObj.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+      album: trackObj.album?.name || '',
+      albumArt: trackObj.album?.images?.[0]?.url || trackObj.image?.[0]?.url || null,
+      duration_ms: trackObj.duration || trackObj.duration_ms || 0,
+    };
+  }).filter(t => t.name !== 'Unknown Track');
 
   return {
     playlist: {
       id: playlistId,
-      name: data.name || 'Spotify Playlist',
-      description: data.description || '',
-      image: data.images?.[0]?.url || null,
-      totalTracks: data.tracks?.total || tracks.length,
+      name: entity.name || entity.title || 'Spotify Playlist',
+      description: entity.description || '',
+      image: entity.images?.[0]?.url || entity.visualIdentity?.image?.[0]?.url || null,
+      totalTracks: entity.trackList?.length || entity.tracks?.total || tracks.length,
     },
     tracks
   };
