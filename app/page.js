@@ -14,6 +14,7 @@ function DashboardContent() {
   const [youtubeToken, setYoutubeToken] = useState(null);
   const [existingPlaylists, setExistingPlaylists] = useState([]);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('player');
 
   useEffect(() => {
     if (youtubeToken) {
@@ -98,19 +99,44 @@ function DashboardContent() {
           </div>
         </div>
       ) : (
-        <div>
-          <CarPlayUI 
-            youtubeToken={youtubeToken} 
-            existingPlaylists={existingPlaylists} 
-          />
-          <div className="sync-container">
-            <PlaylistSync
-              youtubeToken={youtubeToken}
-              onPlaylistSynced={() => { 
-                // We could re-fetch playlists here, but page refresh is also fine.
-                // Or let CarPlayUI pick it up. For now, it will be in existingPlaylists on reload.
-              }}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: '32px', padding: '0 32px', borderBottom: '1px solid #333', marginBottom: '0' }}>
+            <button 
+              onClick={() => setActiveTab('player')} 
+              style={{ background: 'none', border: 'none', color: activeTab === 'player' ? 'white' : '#888', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', padding: '16px 0', borderBottom: activeTab === 'player' ? '2px solid var(--spotify-green)' : '2px solid transparent' }}
+            >
+              Music Player
+            </button>
+            <button 
+              onClick={() => setActiveTab('sync')} 
+              style={{ background: 'none', border: 'none', color: activeTab === 'sync' ? 'white' : '#888', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', padding: '16px 0', borderBottom: activeTab === 'sync' ? '2px solid var(--spotify-green)' : '2px solid transparent' }}
+            >
+              Playlist Sync
+            </button>
+          </div>
+
+          <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <CarPlayUI 
+              youtubeToken={youtubeToken} 
+              existingPlaylists={existingPlaylists} 
+              isMini={activeTab === 'sync'}
             />
+            
+            {activeTab === 'sync' && (
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 'calc(100% - 100px)', overflowY: 'auto', background: '#121212', zIndex: 10, padding: '32px' }}>
+                <div style={{maxWidth: '800px', margin: '0 auto'}}>
+                  <PlaylistSync
+                    youtubeToken={youtubeToken}
+                    onPlaylistSynced={() => { 
+                      axios.get('https://www.googleapis.com/youtube/v3/playlists', {
+                        headers: { Authorization: `Bearer ${youtubeToken}` },
+                        params: { part: 'snippet', mine: true, maxResults: 50 },
+                      }).then(res => setExistingPlaylists(res.data.items || []));
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

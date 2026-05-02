@@ -598,7 +598,8 @@ body {
 
 .carplay-container {
   display: flex;
-  height: 500px;
+  flex: 1;
+  min-height: 500px;
   background: #181818;
   border-radius: 12px;
   overflow: hidden;
@@ -760,6 +761,25 @@ body {
   flex: 1;
   background: black;
   position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .carplay-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+  .carplay-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #333;
+    max-height: 40vh;
+  }
+  .carplay-player-panel {
+    flex: 1;
+    min-height: 50vh;
+  }
 }
 
 /* ── Scrollbar ──────────────────────────────────────────── */

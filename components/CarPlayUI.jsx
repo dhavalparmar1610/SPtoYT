@@ -5,7 +5,7 @@ import axios from 'axios';
 import { Search, ListMusic, Play, ArrowLeft, Loader2, Pin, Calendar, PlusCircle, Plus, X } from 'lucide-react';
 import YouTubePlayer from '@/components/YouTubePlayer';
 
-export default function CarPlayUI({ youtubeToken, existingPlaylists }) {
+export default function CarPlayUI({ youtubeToken, existingPlaylists, isMini }) {
   const [localPlaylists, setLocalPlaylists] = useState(existingPlaylists);
   const [pinnedPlaylists, setPinnedPlaylists] = useState([]);
   const [view, setView] = useState('playlists'); // 'playlists', 'tracks', 'search'
@@ -26,6 +26,13 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists }) {
     try {
       const saved = localStorage.getItem('pinned_playlists');
       if (saved) setPinnedPlaylists(JSON.parse(saved));
+      
+      const lastPlaylist = localStorage.getItem('last_playlist_id');
+      if (lastPlaylist) {
+        setSelectedPlaylistId(lastPlaylist);
+        setView('tracks');
+        setActivePlaylistId(lastPlaylist);
+      }
     } catch (e) {}
   }, []);
 
@@ -181,11 +188,12 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists }) {
   };
 
   return (
-    <div className="carplay-container">
+    <div className="carplay-container" style={isMini ? { flexDirection: 'column', height: '100px', minHeight: '100px', position: 'absolute', bottom: 0, left: 0, width: '100%', zIndex: 20 } : {}}>
       {/* LEFT PANEL */}
-      <div className="carplay-sidebar">
-        {/* Header / Search */}
-        <div className="carplay-header">
+      {!isMini && (
+        <div className="carplay-sidebar">
+          {/* Header / Search */}
+          <div className="carplay-header">
           <form onSubmit={handleSearch} className="carplay-search-form">
             <Search size={18} color="#aaa" />
             <input 
@@ -234,6 +242,7 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists }) {
                       className="carplay-list-item"
                       onClick={() => {
                         setSelectedPlaylistId(p.id);
+                        localStorage.setItem('last_playlist_id', p.id);
                         setView('tracks');
                         setActivePlaylistId(p.id);
                         setActiveVideoId(null);
@@ -241,7 +250,11 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists }) {
                       }}
                       style={{flex: 1}}
                     >
-                      <ListMusic size={20} color={isPinned ? 'var(--spotify-green)' : '#aaa'} />
+                      {p.snippet.thumbnails?.default?.url ? (
+                        <img src={p.snippet.thumbnails.default.url} style={{width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover'}} alt="" />
+                      ) : (
+                        <ListMusic size={20} color={isPinned ? 'var(--spotify-green)' : '#aaa'} />
+                      )}
                       <div style={{display: 'flex', flexDirection: 'column', textAlign: 'left', flex: 1, overflow: 'hidden'}}>
                         <span className="carplay-item-title">{p.snippet.title}</span>
                         <span style={{fontSize: '0.75rem', color: '#888', display: 'flex', alignItems: 'center', gap: '4px'}}>
@@ -358,11 +371,12 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists }) {
       )}
 
       {/* RIGHT PANEL - PLAYER */}
-      <div className="carplay-player-panel">
+      <div className="carplay-player-panel" style={isMini ? { padding: 0 } : {}}>
         <YouTubePlayer 
           videoId={activeVideoId} 
           playlistId={activePlaylistId} 
-          onPlayerReady={setYtPlayer} 
+          onPlayerReady={setYtPlayer}
+          isMini={isMini} 
         />
       </div>
     </div>

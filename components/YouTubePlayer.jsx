@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { SkipBack, SkipForward, Play as PlayIcon, Pause, Shuffle, Repeat, ListMusic, Tv } from 'lucide-react';
 
-export default function YouTubePlayer({ videoId, playlistId, onPlayerReady }) {
+export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMini }) {
   const playerRef = useRef(null);
   const [player, setPlayer] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -126,133 +126,202 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady }) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const artworkUrl = currentVideoData?.video_id 
+    ? `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg` 
+    : '';
+
   return (
-    <div style={{height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', background: '#121212'}}>
+    <div style={{height: '100%', width: '100%', display: 'flex', flexDirection: 'column', position: 'relative', background: '#121212', overflow: 'hidden'}}>
       
-      {/* TOGGLE BUTTON */}
-      <button 
-        onClick={() => setUseCustomPlayer(!useCustomPlayer)}
-        style={{position: 'absolute', top: '16px', right: '16px', zIndex: 50, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', padding: '8px 12px', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.8rem', backdropFilter: 'blur(10px)'}}
-      >
-        <Tv size={16} /> {useCustomPlayer ? 'Watch Video' : 'Hide Video'}
-      </button>
+      {/* DYNAMIC GLOW BACKGROUND */}
+      {useCustomPlayer && artworkUrl && (
+        <div style={{
+          position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%',
+          backgroundImage: `url(${artworkUrl})`, backgroundSize: 'cover', backgroundPosition: 'center',
+          filter: 'blur(100px) brightness(0.3)', opacity: 0.8, zIndex: 0, pointerEvents: 'none', transition: 'background-image 1s ease'
+        }} />
+      )}
 
-      {/* YOUTUBE IFRAME */}
-      <div style={{
-        position: useCustomPlayer ? 'absolute' : 'relative', 
-        opacity: useCustomPlayer ? 0 : 1, 
-        pointerEvents: useCustomPlayer ? 'none' : 'auto', 
-        width: useCustomPlayer ? '10px' : '100%', 
-        height: useCustomPlayer ? '10px' : '100%', 
-        flex: useCustomPlayer ? 'none' : 1,
-        overflow: 'hidden'
-      }}>
-        <div ref={playerRef} style={{width: '100%', height: '100%'}} />
-      </div>
+      {/* CONTENT WRAPPER */}
+      <div style={{position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', flexDirection: isMini ? 'row' : 'column', alignItems: 'center'}}>
+        
+        {/* TOGGLE BUTTON */}
+        {!isMini && (
+          <button 
+            onClick={() => setUseCustomPlayer(!useCustomPlayer)}
+            style={{position: 'absolute', top: '16px', right: '16px', zIndex: 50, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', padding: '8px 12px', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.8rem', backdropFilter: 'blur(10px)'}}
+          >
+            <Tv size={16} /> {useCustomPlayer ? 'Watch Video' : 'Hide Video'}
+          </button>
+        )}
 
-      {/* SPOTIFY UI */}
-      {useCustomPlayer && (
-        <>
-          <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', width: '100%'}}>
-            {currentVideoData ? (
-              <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-                <img 
-                  src={`https://i.ytimg.com/vi/${currentVideoData.video_id}/maxresdefault.jpg`} 
-                  onError={(e) => { e.target.src = `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`; }}
-                  style={{width: '280px', height: '280px', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', marginBottom: '32px'}} 
-                  alt="Album Art"
-                />
-                <h2 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: '0 0 8px 0', textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
-                  {currentVideoData.title}
-                </h2>
-                <p style={{fontSize: '1rem', color: '#aaa', margin: 0, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>
-                  {currentVideoData.author}
-                </p>
-              </div>
-            ) : (
-              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666', width: '100%'}}>
-                <div style={{width: '280px', height: '280px', backgroundColor: '#222', borderRadius: '12px', marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.3)'}}>
-                   <ListMusic size={64} opacity={0.2} />
+        {/* YOUTUBE IFRAME */}
+        <div style={{
+          position: useCustomPlayer ? 'absolute' : 'relative', 
+          opacity: useCustomPlayer ? 0 : 1, 
+          pointerEvents: useCustomPlayer ? 'none' : 'auto', 
+          width: useCustomPlayer ? '10px' : '100%', 
+          height: useCustomPlayer ? '10px' : '100%', 
+          flex: useCustomPlayer ? 'none' : 1,
+          overflow: 'hidden'
+        }}>
+          <div ref={playerRef} style={{width: '100%', height: '100%'}} />
+        </div>
+
+        {/* SPOTIFY UI - FULL SCREEN */}
+        {useCustomPlayer && !isMini && (
+          <>
+            <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', width: '100%'}}>
+              {currentVideoData ? (
+                <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+                  <img 
+                    src={`https://i.ytimg.com/vi/${currentVideoData.video_id}/maxresdefault.jpg`} 
+                    onError={(e) => { e.target.src = `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`; }}
+                    style={{width: '100%', maxWidth: '320px', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', marginBottom: '32px'}} 
+                    alt="Album Art"
+                  />
+                  <h2 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: '0 0 8px 0', textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                    {currentVideoData.title}
+                  </h2>
+                  <p style={{fontSize: '1rem', color: '#aaa', margin: 0, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>
+                    {currentVideoData.author}
+                  </p>
                 </div>
-                <h2>No Track Selected</h2>
-                <p>Select a playlist to start listening</p>
-              </div>
-            )}
-          </div>
-
-          {/* CONTROLS */}
-          <div style={{padding: '0 32px 32px 32px', width: '100%'}}>
-            {/* Progress Bar */}
-            <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', fontSize: '0.8rem', color: '#aaa'}}>
-              <span style={{minWidth: '40px', textAlign: 'right'}}>{formatTime(progress)}</span>
-              <input 
-                type="range" 
-                min={0} 
-                max={duration || 100} 
-                value={progress} 
-                onChange={handleSeek}
-                style={{flex: 1, accentColor: 'var(--spotify-green)', height: '4px', cursor: 'pointer', background: '#333', outline: 'none', borderRadius: '2px'}}
-              />
-              <span style={{minWidth: '40px'}}>{formatTime(duration)}</span>
+              ) : (
+                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666', width: '100%'}}>
+                  <div style={{width: '280px', height: '280px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.3)'}}>
+                     <ListMusic size={64} opacity={0.2} />
+                  </div>
+                  <h2>No Track Selected</h2>
+                  <p>Select a playlist to start listening</p>
+                </div>
+              )}
             </div>
 
-            {/* Buttons */}
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-              <button 
-                onClick={() => {
-                  const newState = !isShuffle;
-                  setIsShuffle(newState);
-                  if (player) player.setShuffle(newState);
-                }}
-                style={{background: 'none', border: 'none', color: isShuffle ? 'var(--spotify-green)' : '#888', cursor: 'pointer', display: 'flex'}}
-              >
-                <Shuffle size={20} />
-              </button>
-              
-              <div style={{display: 'flex', gap: '24px', alignItems: 'center'}}>
+            {/* FULL CONTROLS */}
+            <div style={{padding: '0 32px 32px 32px', width: '100%', maxWidth: '600px'}}>
+              {/* Progress Bar */}
+              <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', fontSize: '0.8rem', color: '#aaa'}}>
+                <span style={{minWidth: '40px', textAlign: 'right'}}>{formatTime(progress)}</span>
+                <input 
+                  type="range" 
+                  min={0} 
+                  max={duration || 100} 
+                  value={progress} 
+                  onChange={handleSeek}
+                  style={{flex: 1, accentColor: 'white', height: '4px', cursor: 'pointer', background: 'rgba(255,255,255,0.2)', outline: 'none', borderRadius: '2px'}}
+                />
+                <span style={{minWidth: '40px'}}>{formatTime(duration)}</span>
+              </div>
+
+              {/* Buttons */}
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <button 
-                  onClick={() => player && player.previousVideo()}
-                  style={{background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex'}}
+                  onClick={() => {
+                    const newState = !isShuffle;
+                    setIsShuffle(newState);
+                    if (player) player.setShuffle(newState);
+                  }}
+                  style={{background: 'none', border: 'none', color: isShuffle ? 'var(--spotify-green)' : '#888', cursor: 'pointer', display: 'flex'}}
                 >
-                  <SkipBack size={28} fill="white" />
+                  <Shuffle size={20} />
                 </button>
+                
+                <div style={{display: 'flex', gap: '24px', alignItems: 'center'}}>
+                  <button 
+                    onClick={() => player && player.previousVideo()}
+                    style={{background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex'}}
+                  >
+                    <SkipBack size={28} fill="white" />
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      if (!player) return;
+                      if (isPlaying) player.pauseVideo();
+                      else player.playVideo();
+                    }}
+                    style={{background: 'white', border: 'none', color: 'black', borderRadius: '50%', padding: '16px', cursor: 'pointer', display: 'flex', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', transition: 'transform 0.1s'}}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    {isPlaying ? <Pause size={28} fill="black" /> : <PlayIcon size={28} fill="black" style={{marginLeft: '4px'}} />}
+                  </button>
+                  
+                  <button 
+                    onClick={() => player && player.nextVideo()}
+                    style={{background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex'}}
+                  >
+                    <SkipForward size={28} fill="white" />
+                  </button>
+                </div>
                 
                 <button 
                   onClick={() => {
-                    if (!player) return;
-                    if (isPlaying) player.pauseVideo();
-                    else player.playVideo();
+                    const newState = !isRepeat;
+                    setIsRepeat(newState);
+                    if (player) player.setLoop(newState);
                   }}
-                  style={{background: 'white', border: 'none', color: 'black', borderRadius: '50%', padding: '16px', cursor: 'pointer', display: 'flex', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', transition: 'transform 0.1s'}}
-                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  style={{background: 'none', border: 'none', color: isRepeat ? 'var(--spotify-green)' : '#888', cursor: 'pointer', display: 'flex'}}
                 >
-                  {isPlaying ? <Pause size={28} fill="black" /> : <PlayIcon size={28} fill="black" style={{marginLeft: '4px'}} />}
-                </button>
-                
-                <button 
-                  onClick={() => player && player.nextVideo()}
-                  style={{background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex'}}
-                >
-                  <SkipForward size={28} fill="white" />
+                  <Repeat size={20} />
                 </button>
               </div>
-              
-              <button 
-                onClick={() => {
-                  const newState = !isRepeat;
-                  setIsRepeat(newState);
-                  if (player) player.setLoop(newState);
-                }}
-                style={{background: 'none', border: 'none', color: isRepeat ? 'var(--spotify-green)' : '#888', cursor: 'pointer', display: 'flex'}}
-              >
-                <Repeat size={20} />
-              </button>
             </div>
+          </>
+        )}
+
+        {/* SPOTIFY UI - MINI PLAYER (Bottom Bar) */}
+        {useCustomPlayer && isMini && (
+          <div style={{display: 'flex', width: '100%', height: '100px', alignItems: 'center', padding: '0 16px', gap: '16px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.1)'}}>
+            {currentVideoData ? (
+              <>
+                <img 
+                  src={`https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`} 
+                  style={{width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px'}} 
+                  alt="Album Art"
+                />
+                <div style={{flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+                  <h3 style={{fontSize: '1rem', fontWeight: 'bold', margin: '0 0 4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                    {currentVideoData.title}
+                  </h3>
+                  <p style={{fontSize: '0.8rem', color: '#aaa', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                    {currentVideoData.author}
+                  </p>
+                </div>
+                
+                <div style={{display: 'flex', gap: '16px', alignItems: 'center'}}>
+                  <button 
+                    onClick={() => {
+                      if (!player) return;
+                      if (isPlaying) player.pauseVideo();
+                      else player.playVideo();
+                    }}
+                    style={{background: 'white', border: 'none', color: 'black', borderRadius: '50%', width: '48px', height: '48px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}
+                  >
+                    {isPlaying ? <Pause size={20} fill="black" /> : <PlayIcon size={20} fill="black" style={{marginLeft: '2px'}} />}
+                  </button>
+                  <button 
+                    onClick={() => player && player.nextVideo()}
+                    style={{background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex'}}
+                  >
+                    <SkipForward size={24} fill="white" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{display: 'flex', alignItems: 'center', gap: '16px', color: '#888'}}>
+                <div style={{width: '64px', height: '64px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                  <ListMusic size={24} opacity={0.5} />
+                </div>
+                <span>Nothing playing</span>
+              </div>
+            )}
           </div>
-        </>
-      )}
+        )}
+        
+      </div>
     </div>
   );
 }
