@@ -170,30 +170,31 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
 
         {/* SPOTIFY UI - FULL SCREEN */}
         {useCustomPlayer && !isMini && (
-          <>
+          <div style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0, justifyContent: 'space-between'}}>
+            {/* Top Info Area */}
             <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 32px', width: '100%', minHeight: 0}}>
               {currentVideoData ? (
                 <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 0}}>
                   <img 
                     src={`https://i.ytimg.com/vi/${currentVideoData.video_id}/maxresdefault.jpg`} 
                     onError={(e) => { e.target.src = `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`; }}
-                    style={{maxHeight: '45vh', maxWidth: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', marginBottom: '24px'}} 
+                    style={{maxHeight: '40vh', maxWidth: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.6)', marginBottom: '24px'}} 
                     alt="Album Art"
                   />
-                  <h2 style={{fontSize: '1.3rem', fontWeight: 'bold', margin: '0 0 4px 0', textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                  <h2 style={{fontSize: '1.4rem', fontWeight: 'bold', margin: '0 0 6px 0', textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white'}}>
                     {currentVideoData.title}
                   </h2>
-                  <p style={{fontSize: '0.9rem', color: '#aaa', margin: 0, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>
+                  <p style={{fontSize: '1rem', color: '#bbb', margin: 0, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>
                     {currentVideoData.author}
                   </p>
                 </div>
               ) : (
-                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666', width: '100%'}}>
-                  <div style={{width: '280px', height: '280px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.3)'}}>
-                     <ListMusic size={64} opacity={0.2} />
+                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#888', width: '100%', textAlign: 'center'}}>
+                  <div style={{width: '240px', height: '240px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.05)'}}>
+                     <ListMusic size={80} opacity={0.1} />
                   </div>
-                  <h2>No Track Selected</h2>
-                  <p>Select a playlist to start listening</p>
+                  <h2 style={{fontSize: '1.5rem', marginBottom: '8px', color: '#aaa'}}>Ready to Play</h2>
+                  <p style={{color: '#666'}}>Select a song from your playlist to start</p>
                 </div>
               )}
             </div>
@@ -269,7 +270,7 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
                 </button>
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {/* SPOTIFY UI - MINI PLAYER (Bottom Bar) */}
