@@ -99,23 +99,23 @@ function DashboardContent() {
           </div>
         </div>
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', gap: '32px', padding: '0 32px', borderBottom: '1px solid #333', marginBottom: '0' }}>
+        <div className="dashboard-wrapper">
+          <div className="tab-bar" style={{ display: 'flex', gap: '32px', padding: '0 8px', borderBottom: '1px solid #333' }}>
             <button 
               onClick={() => setActiveTab('player')} 
-              style={{ background: 'none', border: 'none', color: activeTab === 'player' ? 'white' : '#888', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', padding: '16px 0', borderBottom: activeTab === 'player' ? '2px solid var(--spotify-green)' : '2px solid transparent' }}
+              style={{ background: 'none', border: 'none', color: activeTab === 'player' ? 'white' : '#888', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', padding: '12px 0', borderBottom: activeTab === 'player' ? '2px solid var(--spotify-green)' : '2px solid transparent' }}
             >
               Music Player
             </button>
             <button 
               onClick={() => setActiveTab('sync')} 
-              style={{ background: 'none', border: 'none', color: activeTab === 'sync' ? 'white' : '#888', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', padding: '16px 0', borderBottom: activeTab === 'sync' ? '2px solid var(--spotify-green)' : '2px solid transparent' }}
+              style={{ background: 'none', border: 'none', color: activeTab === 'sync' ? 'white' : '#888', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', padding: '12px 0', borderBottom: activeTab === 'sync' ? '2px solid var(--spotify-green)' : '2px solid transparent' }}
             >
               Playlist Sync
             </button>
           </div>
 
-          <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="content-area">
             <CarPlayUI 
               youtubeToken={youtubeToken} 
               existingPlaylists={existingPlaylists} 
