@@ -5,23 +5,27 @@ import axios from 'axios';
  * Get an anonymous Spotify token — same one spotify.com uses in its web player.
  */
 async function getAnonymousToken() {
-  const res = await axios.get('https://open.spotify.com/get_access_token', {
-    params: {
-      reason: 'transport',
-      productType: 'web_player',
-    },
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept': 'application/json',
-      'Referer': 'https://open.spotify.com/',
-    },
-  });
-
-  if (!res.data?.accessToken) {
-    throw new Error('Failed to obtain anonymous Spotify token');
+  try {
+    const res = await axios.get('https://open.spotify.com/get_access_token', {
+      params: { reason: 'transport', productType: 'web_player' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://open.spotify.com/',
+      },
+    });
+    if (res.data?.accessToken) return res.data.accessToken;
+  } catch (e) {
+    console.warn('Primary anonymous token method failed, trying Embed theft...');
   }
 
-  return res.data.accessToken;
+  // Fallback: Steal token from Embed page
+  const embedRes = await axios.get('https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M', {
+    headers: { 'User-Agent': 'Mozilla/5.0' }
+  });
+  const match = embedRes.data.match(/accessToken":"(.+?)"/);
+  if (match) return match[1];
+
+  throw new Error('Failed to obtain any anonymous Spotify token');
 }
 
 /**
@@ -47,12 +51,14 @@ async function fetchPlaylistViaEmbed(playlistId) {
     
     const data = JSON.parse(nextMatch[1]);
     const playlist = data.props?.pageProps?.state?.data?.entity || {};
-    const tracks = playlist.tracks?.items?.map(item => ({
-      name: item.track?.name,
-      artist: item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
-      album: item.track?.album?.name || '',
-      albumArt: item.track?.album?.images?.[0]?.url || null,
-      duration_ms: item.track?.duration_ms || 0,
+    const items = playlist.tracks?.items || [];
+    
+    const tracks = items.map(item => ({
+      name: item.title || item.name || item.track?.name,
+      artist: item.subtitle || item.artist || item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+      album: item.album?.name || '',
+      albumArt: item.album?.images?.[0]?.url || item.image?.[0]?.url || null,
+      duration_ms: item.duration || item.duration_ms || 0,
     })).filter(t => t.name) || [];
 
     return {
@@ -68,13 +74,14 @@ async function fetchPlaylistViaEmbed(playlistId) {
   }
 
   const data = JSON.parse(match[1]);
-  // The structure here is usually { name, description, images, tracks: { items: [...] } }
-  const tracks = data.tracks?.items?.map(item => ({
-    name: item.track?.name,
-    artist: item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
-    album: item.track?.album?.name || '',
-    albumArt: item.track?.album?.images?.[0]?.url || null,
-    duration_ms: item.track?.duration_ms || 0,
+  const items = data.tracks?.items || [];
+  
+  const tracks = items.map(item => ({
+    name: item.title || item.name || item.track?.name,
+    artist: item.subtitle || item.artist || item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+    album: item.album?.name || '',
+    albumArt: item.album?.images?.[0]?.url || item.image?.[0]?.url || null,
+    duration_ms: item.duration || item.duration_ms || 0,
   })).filter(t => t.name) || [];
 
   return {
