@@ -66,36 +66,55 @@ export async function GET(request) {
     // 1. Get a token (either normally or stolen from embed)
     const token = await getAnonymousToken(playlistId);
 
-    // 2. Fetch playlist metadata
+    // 2. Fetch playlist metadata and FIRST page (100 tracks)
     const playlistRes = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
       headers: { Authorization: `Bearer ${token}` },
-      params: { fields: 'id,name,description,images,tracks.total' },
+      params: { fields: 'id,name,description,images,tracks(total,items(track(name,artists(name),album(name,images),duration_ms)),next)' },
     });
 
     const playlist = playlistRes.data;
-    const allTracks = [];
-    
-    // 3. Paginate through ALL tracks (not just the first 100)
-    let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(name,artists(name),album(name,images),duration_ms)),next`;
+    const totalTracks = playlist.tracks.total;
+    let allTracks = playlist.tracks.items.map(item => ({
+      name: item.track?.name,
+      artist: item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+      album: item.track?.album?.name || '',
+      albumArt: item.track?.album?.images?.[0]?.url || null,
+      duration_ms: item.track?.duration_ms || 0,
+    })).filter(t => t.name);
 
-    while (nextUrl) {
-      const tracksRes = await axios.get(nextUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      const items = tracksRes.data.items || [];
-      for (const item of items) {
-        if (item?.track?.name) {
-          allTracks.push({
-            name: item.track.name,
-            artist: item.track.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
-            album: item.track.album?.name || '',
-            albumArt: item.track.album?.images?.[0]?.url || null,
-            duration_ms: item.track.duration_ms || 0,
-          });
-        }
+    // 3. If there are more than 100 tracks, fetch them in PARALLEL
+    if (totalTracks > 100) {
+      const remainingPages = Math.ceil((totalTracks - 100) / 100);
+      const pagePromises = [];
+
+      for (let i = 1; i <= remainingPages; i++) {
+        const offset = i * 100;
+        const promise = axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            offset,
+            limit: 100,
+            fields: 'items(track(name,artists(name),album(name,images),duration_ms))',
+          },
+        });
+        pagePromises.push(promise);
       }
-      nextUrl = tracksRes.data.next || null;
+
+      const results = await Promise.all(pagePromises);
+      results.forEach(res => {
+        const items = res.data.items || [];
+        items.forEach(item => {
+          if (item?.track?.name) {
+            allTracks.push({
+              name: item.track.name,
+              artist: item.track.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+              album: item.track.album?.name || '',
+              albumArt: item.track.album?.images?.[0]?.url || null,
+              duration_ms: item.track.duration_ms || 0,
+            });
+          }
+        });
+      });
     }
 
     return NextResponse.json({
@@ -104,7 +123,7 @@ export async function GET(request) {
         name: playlist.name,
         description: playlist.description || '',
         image: playlist.images?.[0]?.url || null,
-        totalTracks: playlist.tracks?.total || allTracks.length,
+        totalTracks: totalTracks,
       },
       tracks: allTracks,
     });
@@ -112,14 +131,14 @@ export async function GET(request) {
   } catch (err) {
     console.error(`Spotify Sync Error: ${err.message}`);
     
-    // Final fallback: Use the basic scraper if the API method fails completely
+    // Final fallback: Use the basic scraper if the API method fails
     try {
-      const { fetchPlaylistViaEmbed } = await import('./scraper_fallback'); // I'll move the scraper to a helper to keep this clean
+      const { fetchPlaylistViaEmbed } = await import('./scraper_fallback');
       const result = await fetchPlaylistViaEmbed(playlistId);
       return NextResponse.json(result);
     } catch (fallbackErr) {
       return NextResponse.json({ 
-        error: `Failed to load all tracks. Spotify might be blocking the request. (Error: ${err.message})` 
+        error: `Failed to load tracks. (Error: ${err.message})` 
       }, { status: 500 });
     }
   }
