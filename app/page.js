@@ -123,8 +123,18 @@ function DashboardContent() {
             />
             
             {activeTab === 'sync' && (
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 'calc(100% - 100px)', overflowY: 'auto', background: '#121212', zIndex: 10, padding: '32px' }}>
-                <div style={{maxWidth: '800px', margin: '0 auto'}}>
+              <div style={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: 0, 
+                width: '100%', 
+                height: 'calc(100% - 100px)', 
+                overflowY: 'auto', 
+                background: '#0a0a0f', 
+                zIndex: 100, 
+                padding: '24px' 
+              }}>
+                <div style={{maxWidth: '900px', margin: '0 auto'}}>
                   <PlaylistSync
                     youtubeToken={youtubeToken}
                     onPlaylistSynced={() => { 

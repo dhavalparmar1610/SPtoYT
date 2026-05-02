@@ -55,10 +55,13 @@ body {
 /* ── Layout ─────────────────────────────────────────────── */
 
 .app-container {
-  min-height: 100vh;
-  padding: 24px;
-  max-width: 1200px;
+  height: 100vh;
+  padding: 16px;
+  max-width: 1400px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   animation: fade-in 0.4s ease-out;
 }
 
@@ -599,11 +602,11 @@ body {
 .carplay-container {
   display: flex;
   flex: 1;
-  min-height: 500px;
+  min-height: 0; /* Important for flex child scrolling */
   background: #181818;
   border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 24px;
+  margin-bottom: 0;
   border: 1px solid #333;
 }
 
@@ -765,20 +768,27 @@ body {
 }
 
 @media (max-width: 768px) {
+  .app-container {
+    padding: 8px;
+  }
   .carplay-container {
-    flex-direction: column;
+    flex-direction: column-reverse; /* Player at top, list at bottom */
     height: auto;
-    min-height: 100vh;
+    min-height: 0;
   }
   .carplay-sidebar {
     width: 100%;
     border-right: none;
-    border-bottom: 1px solid #333;
-    max-height: 40vh;
+    border-top: 1px solid #333;
+    flex: 1;
+    overflow-y: auto;
+    max-height: none;
   }
   .carplay-player-panel {
-    flex: 1;
-    min-height: 50vh;
+    width: 100%;
+    height: 320px;
+    flex: none;
+    border-bottom: 1px solid #333;
   }
 }
 
