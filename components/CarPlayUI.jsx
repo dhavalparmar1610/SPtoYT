@@ -346,6 +346,7 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists, isMini }) {
           )}
         </div>
       </div>
+    )}
 
       {addingVideoId && (
         <div style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
