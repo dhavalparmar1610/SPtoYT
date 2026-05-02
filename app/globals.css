@@ -617,6 +617,7 @@ body {
   display: flex;
   flex-direction: column;
   border-right: 1px solid #333;
+  min-height: 0; /* Important for children to scroll */
 }
 
 .carplay-header {
@@ -782,11 +783,13 @@ body {
     border-top: 1px solid #333;
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
     max-height: none;
   }
   .carplay-player-panel {
     width: 100%;
-    height: 320px;
+    height: 40vh;
+    min-height: 280px;
     flex: none;
     border-bottom: 1px solid #333;
   }

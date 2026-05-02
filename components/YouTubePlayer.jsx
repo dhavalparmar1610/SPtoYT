@@ -136,14 +136,14 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
       {/* DYNAMIC GLOW BACKGROUND */}
       {useCustomPlayer && artworkUrl && (
         <div style={{
-          position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%',
+          position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
           backgroundImage: `url(${artworkUrl})`, backgroundSize: 'cover', backgroundPosition: 'center',
-          filter: 'blur(100px) brightness(0.3)', opacity: 0.8, zIndex: 0, pointerEvents: 'none', transition: 'background-image 1s ease'
+          filter: 'blur(80px) brightness(0.25)', opacity: 0.7, zIndex: 0, pointerEvents: 'none', transition: 'background-image 1s ease'
         }} />
       )}
 
       {/* CONTENT WRAPPER */}
-      <div style={{position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', flexDirection: isMini ? 'row' : 'column', alignItems: 'center'}}>
+      <div style={{position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', flexDirection: isMini ? 'row' : 'column', alignItems: 'center', minHeight: 0}}>
         
         {/* TOGGLE BUTTON */}
         {!isMini && (
@@ -171,19 +171,19 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
         {/* SPOTIFY UI - FULL SCREEN */}
         {useCustomPlayer && !isMini && (
           <>
-            <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', width: '100%'}}>
+            <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 32px', width: '100%', minHeight: 0}}>
               {currentVideoData ? (
-                <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+                <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 0}}>
                   <img 
                     src={`https://i.ytimg.com/vi/${currentVideoData.video_id}/maxresdefault.jpg`} 
                     onError={(e) => { e.target.src = `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`; }}
-                    style={{width: '100%', maxWidth: '320px', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', marginBottom: '32px'}} 
+                    style={{maxHeight: '45vh', maxWidth: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', marginBottom: '24px'}} 
                     alt="Album Art"
                   />
-                  <h2 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: '0 0 8px 0', textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                  <h2 style={{fontSize: '1.3rem', fontWeight: 'bold', margin: '0 0 4px 0', textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
                     {currentVideoData.title}
                   </h2>
-                  <p style={{fontSize: '1rem', color: '#aaa', margin: 0, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>
+                  <p style={{fontSize: '0.9rem', color: '#aaa', margin: 0, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>
                     {currentVideoData.author}
                   </p>
                 </div>
