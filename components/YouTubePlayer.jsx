@@ -170,15 +170,15 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
 
         {/* SPOTIFY UI - FULL SCREEN */}
         {useCustomPlayer && !isMini && (
-          <div style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0, justifyContent: 'space-between'}}>
-            {/* Top Info Area */}
-            <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 32px', width: '100%', minHeight: 0}}>
+          <div style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0}}>
+            {/* Album Art + Info */}
+            <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 32px 16px', width: '100%', minHeight: 0, overflow: 'hidden'}}>
               {currentVideoData ? (
                 <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 0}}>
                   <img 
                     src={`https://i.ytimg.com/vi/${currentVideoData.video_id}/maxresdefault.jpg`} 
                     onError={(e) => { e.target.src = `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`; }}
-                    style={{maxHeight: '40vh', maxWidth: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.6)', marginBottom: '24px'}} 
+                    style={{width: '220px', height: '220px', objectFit: 'cover', borderRadius: '16px', boxShadow: '0 16px 48px rgba(0,0,0,0.7)', marginBottom: '20px', flexShrink: 0}} 
                     alt="Album Art"
                   />
                   <h2 style={{fontSize: '1.4rem', fontWeight: 'bold', margin: '0 0 6px 0', textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white'}}>
@@ -199,8 +199,8 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
               )}
             </div>
 
-            {/* FULL CONTROLS */}
-            <div style={{padding: '0 32px 32px 32px', width: '100%', maxWidth: '600px'}}>
+            {/* Controls */}
+            <div style={{flexShrink: 0, padding: '0 32px 24px', width: '100%', maxWidth: '560px', alignSelf: 'center'}}>
               {/* Progress Bar */}
               <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', fontSize: '0.8rem', color: '#aaa'}}>
                 <span style={{minWidth: '40px', textAlign: 'right'}}>{formatTime(progress)}</span>
