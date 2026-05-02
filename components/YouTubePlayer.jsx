@@ -84,7 +84,9 @@ export default function YouTubePlayer({ videoId, playlistId }) {
       </div>
 
       <div style={{flex: 1, backgroundColor: 'black', borderRadius: '8px', overflow: 'hidden', position: 'relative', minHeight: '250px'}}>
-        <div ref={playerRef} style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: (videoId || playlistId) ? 'block' : 'none'}} />
+        <div style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: (videoId || playlistId) ? 'block' : 'none'}}>
+          <div ref={playerRef} style={{width: '100%', height: '100%'}} />
+        </div>
         
         {!(videoId || playlistId) && (
           <div className="track-info" style={{color: 'var(--text-muted)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center'}}>
