@@ -1,50 +1,49 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 
-const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
-const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-
 /**
- * Get a Client Credentials token from Spotify.
- * This does NOT require Premium — it only allows access to public data.
+ * Get an anonymous Spotify token — same one spotify.com uses in its web player.
+ * Does NOT require client credentials or a Premium subscription.
  */
-async function getClientCredentialsToken() {
-  const authHeader = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
+async function getAnonymousToken() {
+  const res = await axios.get('https://open.spotify.com/get_access_token', {
+    params: {
+      reason: 'transport',
+      productType: 'web_player',
+    },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'application/json',
+      'Accept-Language': 'en',
+      'spotify-app-version': '1.2.46.424.g1ef04de4',
+      'app-platform': 'WebPlayer',
+      'Referer': 'https://open.spotify.com/',
+    },
+  });
 
-  const res = await axios.post(
-    'https://accounts.spotify.com/api/token',
-    'grant_type=client_credentials',
-    {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${authHeader}`,
-      },
-    }
-  );
+  if (!res.data?.accessToken) {
+    throw new Error('Failed to obtain anonymous Spotify token');
+  }
 
-  return res.data.access_token;
+  return res.data.accessToken;
 }
 
 /**
- * Extract playlist ID from various Spotify URL formats:
- *  - https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
- *  - https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=...
- *  - spotify:playlist:37i9dQZF1DXcBWIGoYBM5M
- *  - 37i9dQZF1DXcBWIGoYBM5M  (bare ID)
+ * Extract playlist ID from various Spotify URL formats.
  */
 function extractPlaylistId(input) {
   if (!input) return null;
   input = input.trim();
 
-  // Spotify URI format
+  // Spotify URI format: spotify:playlist:ID
   const uriMatch = input.match(/spotify:playlist:([a-zA-Z0-9]+)/);
   if (uriMatch) return uriMatch[1];
 
-  // URL format
+  // URL format: https://open.spotify.com/playlist/ID
   const urlMatch = input.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
   if (urlMatch) return urlMatch[1];
 
-  // Bare ID (alphanumeric, 22 chars typical)
+  // Bare ID (alphanumeric, 15+ chars)
   if (/^[a-zA-Z0-9]{15,}$/.test(input)) return input;
 
   return null;
@@ -60,21 +59,14 @@ export async function GET(request) {
 
   // Decode in case the URL was double-encoded
   const decodedInput = decodeURIComponent(urlInput);
-
-  if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
-    console.error('Spotify credentials missing from environment variables!');
-    return NextResponse.json({ 
-      error: 'Server configuration error: Spotify credentials not set. Please add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET to your environment variables.' 
-    }, { status: 500 });
-  }
-
   const playlistId = extractPlaylistId(decodedInput);
+
   if (!playlistId) {
-    return NextResponse.json({ error: 'Could not extract a valid playlist ID from the provided URL' }, { status: 400 });
+    return NextResponse.json({ error: 'Could not extract a valid playlist ID from the provided URL.' }, { status: 400 });
   }
 
   try {
-    const token = await getClientCredentialsToken();
+    const token = await getAnonymousToken();
 
     // Fetch playlist metadata
     const playlistRes = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
@@ -86,7 +78,7 @@ export async function GET(request) {
 
     // Fetch all tracks with pagination
     const allTracks = [];
-    let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(name,artists(name),album(name,images),duration_ms,external_ids)),next`;
+    let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(name,artists(name),album(name,images),duration_ms)),next`;
 
     while (nextUrl) {
       const tracksRes = await axios.get(nextUrl, {
@@ -95,7 +87,7 @@ export async function GET(request) {
 
       const items = tracksRes.data.items || [];
       for (const item of items) {
-        if (item.track) {
+        if (item?.track?.name) {
           allTracks.push({
             name: item.track.name,
             artist: item.track.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
@@ -120,21 +112,21 @@ export async function GET(request) {
       tracks: allTracks,
     });
   } catch (err) {
-    const spotifyError = err.response?.data;
     const status = err.response?.status || 500;
-    console.error(`Spotify API error [${status}]:`, JSON.stringify(spotifyError || err.message));
+    const spotifyMsg = err.response?.data?.error?.message || err.message;
+    console.error(`Spotify anonymous API error [${status}]:`, spotifyMsg);
 
     let message;
-    if (status === 401) {
-      message = 'Spotify authentication failed. Check your SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on Vercel.';
-    } else if (status === 404) {
+    if (status === 404) {
       message = 'Playlist not found. Make sure the URL is correct and the playlist is set to Public.';
-    } else if (status === 403) {
-      message = 'Access denied by Spotify. The playlist may be private, or your Spotify app credentials are invalid.';
+    } else if (status === 401 || status === 403) {
+      message = 'Could not access this playlist. Make sure it is set to Public on Spotify.';
     } else {
-      message = `Failed to fetch playlist from Spotify (${status}).`;
+      message = `Failed to fetch playlist (${status}): ${spotifyMsg}`;
     }
 
     return NextResponse.json({ error: message }, { status });
   }
 }
+
+
