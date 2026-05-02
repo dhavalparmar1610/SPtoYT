@@ -3,7 +3,6 @@ import axios from 'axios';
 
 /**
  * Get an anonymous Spotify token — same one spotify.com uses in its web player.
- * Does NOT require client credentials or a Premium subscription.
  */
 async function getAnonymousToken() {
   const res = await axios.get('https://open.spotify.com/get_access_token', {
@@ -14,9 +13,6 @@ async function getAnonymousToken() {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       'Accept': 'application/json',
-      'Accept-Language': 'en',
-      'spotify-app-version': '1.2.46.424.g1ef04de4',
-      'app-platform': 'WebPlayer',
       'Referer': 'https://open.spotify.com/',
     },
   });
@@ -29,23 +25,81 @@ async function getAnonymousToken() {
 }
 
 /**
+ * FALLBACK: Fetch playlist data by scraping the Spotify Embed page.
+ * This is very reliable for public playlists and doesn't require any tokens.
+ */
+async function fetchPlaylistViaEmbed(playlistId) {
+  const url = `https://open.spotify.com/embed/playlist/${playlistId}`;
+  const res = await axios.get(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    }
+  });
+
+  const html = res.data;
+  
+  // Look for the JSON payload in the script tag
+  const match = html.match(/<script id="resource" type="application\/json">(.+?)<\/script>/);
+  if (!match) {
+    // Try the __NEXT_DATA__ format
+    const nextMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
+    if (!nextMatch) throw new Error('Could not find playlist data in embed page');
+    
+    const data = JSON.parse(nextMatch[1]);
+    const playlist = data.props?.pageProps?.state?.data?.entity || {};
+    const tracks = playlist.tracks?.items?.map(item => ({
+      name: item.track?.name,
+      artist: item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+      album: item.track?.album?.name || '',
+      albumArt: item.track?.album?.images?.[0]?.url || null,
+      duration_ms: item.track?.duration_ms || 0,
+    })).filter(t => t.name) || [];
+
+    return {
+      playlist: {
+        id: playlistId,
+        name: playlist.name || 'Spotify Playlist',
+        description: playlist.description || '',
+        image: playlist.images?.[0]?.url || null,
+        totalTracks: playlist.tracks?.total || tracks.length,
+      },
+      tracks
+    };
+  }
+
+  const data = JSON.parse(match[1]);
+  // The structure here is usually { name, description, images, tracks: { items: [...] } }
+  const tracks = data.tracks?.items?.map(item => ({
+    name: item.track?.name,
+    artist: item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+    album: item.track?.album?.name || '',
+    albumArt: item.track?.album?.images?.[0]?.url || null,
+    duration_ms: item.track?.duration_ms || 0,
+  })).filter(t => t.name) || [];
+
+  return {
+    playlist: {
+      id: playlistId,
+      name: data.name || 'Spotify Playlist',
+      description: data.description || '',
+      image: data.images?.[0]?.url || null,
+      totalTracks: data.tracks?.total || tracks.length,
+    },
+    tracks
+  };
+}
+
+/**
  * Extract playlist ID from various Spotify URL formats.
  */
 function extractPlaylistId(input) {
   if (!input) return null;
   input = input.trim();
-
-  // Spotify URI format: spotify:playlist:ID
   const uriMatch = input.match(/spotify:playlist:([a-zA-Z0-9]+)/);
   if (uriMatch) return uriMatch[1];
-
-  // URL format: https://open.spotify.com/playlist/ID
   const urlMatch = input.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
   if (urlMatch) return urlMatch[1];
-
-  // Bare ID (alphanumeric, 15+ chars)
   if (/^[a-zA-Z0-9]{15,}$/.test(input)) return input;
-
   return null;
 }
 
@@ -57,7 +111,6 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Missing "url" query parameter' }, { status: 400 });
   }
 
-  // Decode in case the URL was double-encoded
   const decodedInput = decodeURIComponent(urlInput);
   const playlistId = extractPlaylistId(decodedInput);
 
@@ -65,18 +118,16 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Could not extract a valid playlist ID from the provided URL.' }, { status: 400 });
   }
 
+  // Try standard Anonymous Token first
   try {
     const token = await getAnonymousToken();
 
-    // Fetch playlist metadata
     const playlistRes = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
       headers: { Authorization: `Bearer ${token}` },
       params: { fields: 'id,name,description,images,tracks.total' },
     });
 
     const playlist = playlistRes.data;
-
-    // Fetch all tracks with pagination
     const allTracks = [];
     let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(name,artists(name),album(name,images),duration_ms)),next`;
 
@@ -84,7 +135,6 @@ export async function GET(request) {
       const tracksRes = await axios.get(nextUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const items = tracksRes.data.items || [];
       for (const item of items) {
         if (item?.track?.name) {
@@ -97,7 +147,6 @@ export async function GET(request) {
           });
         }
       }
-
       nextUrl = tracksRes.data.next || null;
     }
 
@@ -111,21 +160,22 @@ export async function GET(request) {
       },
       tracks: allTracks,
     });
+
   } catch (err) {
-    const status = err.response?.status || 500;
-    const spotifyMsg = err.response?.data?.error?.message || err.message;
-    console.error(`Spotify anonymous API error [${status}]:`, spotifyMsg);
-
-    let message;
-    if (status === 404) {
-      message = 'Playlist not found. Make sure the URL is correct and the playlist is set to Public.';
-    } else if (status === 401 || status === 403) {
-      message = 'Could not access this playlist. Make sure it is set to Public on Spotify.';
-    } else {
-      message = `Failed to fetch playlist (${status}): ${spotifyMsg}`;
+    console.warn(`Anonymous Token method failed for ${playlistId}, trying Embed Scraper fallback...`);
+    
+    // Fallback to Embed Scraper
+    try {
+      const result = await fetchPlaylistViaEmbed(playlistId);
+      return NextResponse.json(result);
+    } catch (fallbackErr) {
+      console.error('Embed Scraper fallback failed:', fallbackErr.message);
+      
+      const status = err.response?.status || 500;
+      return NextResponse.json({ 
+        error: `Could not access this playlist. Error: ${err.message}. Fallback Error: ${fallbackErr.message}` 
+      }, { status });
     }
-
-    return NextResponse.json({ error: message }, { status });
   }
 }
 
