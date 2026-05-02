@@ -253,7 +253,18 @@ export default function PlaylistSync({ youtubeToken, onPreviewVideo, onPlaylistS
             track.status = 'not_found';
           }
         } catch (err) {
+          const isAuthError = err.response?.status === 401;
           console.error(`Error syncing track ${track.name}`, err);
+          
+          if (isAuthError) {
+            setLoadError('YouTube session expired. Please sign in again to continue syncing.');
+            track.status = 'failed';
+            const updatedTracks = [...syncTracks];
+            updatedTracks[i] = { ...track };
+            setSyncState(prev => ({ ...prev, progress: i + 1, tracks: updatedTracks, isSyncing: false }));
+            return; // STOP SYNC
+          }
+          
           track.status = 'not_found';
         }
 

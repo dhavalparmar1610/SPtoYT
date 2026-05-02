@@ -69,41 +69,51 @@ export async function GET(request) {
     // 2. Fetch playlist metadata and FIRST page (100 tracks)
     const playlistRes = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
       headers: { Authorization: `Bearer ${token}` },
-      params: { fields: 'id,name,description,images,tracks(total,items(track(name,artists(name),album(name,images),duration_ms)),next)' },
+      params: { fields: 'id,name,description,images,tracks(total,items(track(name,artists(name),album(name,images),duration_ms)))' },
     });
 
     const playlist = playlistRes.data;
-    const totalTracks = playlist.tracks.total;
-    let allTracks = playlist.tracks.items.map(item => ({
-      name: item.track?.name,
-      artist: item.track?.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
-      album: item.track?.album?.name || '',
-      albumArt: item.track?.album?.images?.[0]?.url || null,
-      duration_ms: item.track?.duration_ms || 0,
-    })).filter(t => t.name);
+    if (!playlist.tracks) throw new Error('Playlist data is incomplete or private');
 
-    // 3. If there are more than 100 tracks, fetch them in PARALLEL
-    if (totalTracks > 100) {
-      const remainingPages = Math.ceil((totalTracks - 100) / 100);
+    const totalTracks = playlist.tracks.total || 0;
+    let allTracks = (playlist.tracks.items || []).map(item => {
+      if (!item.track) return null;
+      return {
+        name: item.track.name,
+        artist: item.track.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+        album: item.track.album?.name || '',
+        albumArt: item.track.album?.images?.[0]?.url || null,
+        duration_ms: item.track.duration_ms || 0,
+      };
+    }).filter(Boolean);
+
+    // 3. If there are more than 100 tracks, fetch remaining in parallel
+    if (totalTracks > allTracks.length) {
+      const remainingCount = totalTracks - allTracks.length;
+      const remainingPages = Math.ceil(remainingCount / 100);
       const pagePromises = [];
 
       for (let i = 1; i <= remainingPages; i++) {
         const offset = i * 100;
-        const promise = axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
-          headers: { Authorization: `Bearer ${token}` },
-          params: {
-            offset,
-            limit: 100,
-            fields: 'items(track(name,artists(name),album(name,images),duration_ms))',
-          },
-        });
-        pagePromises.push(promise);
+        pagePromises.push(
+          axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+            headers: { Authorization: `Bearer ${token}` },
+            params: {
+              offset,
+              limit: 100,
+              fields: 'items(track(name,artists(name),album(name,images),duration_ms))',
+            },
+          }).catch(e => {
+            console.error(`Failed to fetch page at offset ${offset}:`, e.message);
+            return null; // Don't crash the whole thing
+          })
+        );
       }
 
       const results = await Promise.all(pagePromises);
       results.forEach(res => {
-        const items = res.data.items || [];
-        items.forEach(item => {
+        if (!res?.data?.items) return;
+        res.data.items.forEach(item => {
           if (item?.track?.name) {
             allTracks.push({
               name: item.track.name,
@@ -131,7 +141,7 @@ export async function GET(request) {
   } catch (err) {
     console.error(`Spotify Sync Error: ${err.message}`);
     
-    // Final fallback: Use the basic scraper if the API method fails
+    // Final fallback: Use the basic scraper (limited to 100)
     try {
       const { fetchPlaylistViaEmbed } = await import('./scraper_fallback');
       const result = await fetchPlaylistViaEmbed(playlistId);
