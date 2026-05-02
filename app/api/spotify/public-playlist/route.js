@@ -58,7 +58,17 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Missing "url" query parameter' }, { status: 400 });
   }
 
-  const playlistId = extractPlaylistId(urlInput);
+  // Decode in case the URL was double-encoded
+  const decodedInput = decodeURIComponent(urlInput);
+
+  if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
+    console.error('Spotify credentials missing from environment variables!');
+    return NextResponse.json({ 
+      error: 'Server configuration error: Spotify credentials not set. Please add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET to your environment variables.' 
+    }, { status: 500 });
+  }
+
+  const playlistId = extractPlaylistId(decodedInput);
   if (!playlistId) {
     return NextResponse.json({ error: 'Could not extract a valid playlist ID from the provided URL' }, { status: 400 });
   }
@@ -110,15 +120,20 @@ export async function GET(request) {
       tracks: allTracks,
     });
   } catch (err) {
-    console.error('Error fetching public playlist:', err.response?.data || err.message);
-
+    const spotifyError = err.response?.data;
     const status = err.response?.status || 500;
-    const message =
-      status === 404
-        ? 'Playlist not found. Make sure it exists and is set to Public.'
-        : status === 403
-          ? 'Access denied. The playlist may be private.'
-          : 'Failed to fetch playlist from Spotify.';
+    console.error(`Spotify API error [${status}]:`, JSON.stringify(spotifyError || err.message));
+
+    let message;
+    if (status === 401) {
+      message = 'Spotify authentication failed. Check your SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on Vercel.';
+    } else if (status === 404) {
+      message = 'Playlist not found. Make sure the URL is correct and the playlist is set to Public.';
+    } else if (status === 403) {
+      message = 'Access denied by Spotify. The playlist may be private, or your Spotify app credentials are invalid.';
+    } else {
+      message = `Failed to fetch playlist from Spotify (${status}).`;
+    }
 
     return NextResponse.json({ error: message }, { status });
   }
