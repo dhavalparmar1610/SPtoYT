@@ -594,6 +594,174 @@ body {
   .url-input-group { flex-direction: column; }
 }
 
+/* ── CarPlay UI ─────────────────────────────────────────── */
+
+.carplay-container {
+  display: flex;
+  height: 500px;
+  background: #181818;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  border: 1px solid #333;
+}
+
+.carplay-sidebar {
+  width: 40%;
+  min-width: 300px;
+  background: #121212;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #333;
+}
+
+.carplay-header {
+  padding: 16px;
+  border-bottom: 1px solid #222;
+}
+
+.carplay-search-form {
+  display: flex;
+  align-items: center;
+  background: #222;
+  border-radius: 8px;
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.carplay-search-input {
+  background: transparent;
+  border: none;
+  color: white;
+  outline: none;
+  flex: 1;
+  font-size: 1rem;
+}
+
+.carplay-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.carplay-section-title {
+  font-size: 0.9rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.carplay-list-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.carplay-list-item:hover {
+  background: #2a2a2a;
+}
+
+.carplay-item-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carplay-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+
+.carplay-back-btn:hover {
+  color: white;
+}
+
+.carplay-track-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.carplay-track-item:hover {
+  background: #2a2a2a;
+}
+
+.carplay-track-item.active {
+  background: #2a2a2a;
+  border-left: 3px solid var(--spotify-green);
+}
+
+.carplay-track-thumb {
+  width: 60px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.carplay-track-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.carplay-track-title {
+  font-weight: 500;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carplay-track-author {
+  font-size: 0.8rem;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carplay-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  color: #aaa;
+}
+
+.carplay-player-panel {
+  flex: 1;
+  background: black;
+  position: relative;
+}
+
 /* ── Scrollbar ──────────────────────────────────────────── */
 
 ::-webkit-scrollbar { width: 6px; }

@@ -2,8 +2,8 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import YouTubePlayer from '@/components/YouTubePlayer';
 import PlaylistSync from '@/components/PlaylistSync';
+import CarPlayUI from '@/components/CarPlayUI';
 import { Music, PlayCircle } from 'lucide-react';
 import axios from 'axios';
 
@@ -12,8 +12,6 @@ function DashboardContent() {
   const router = useRouter();
 
   const [youtubeToken, setYoutubeToken] = useState(null);
-  const [previewYtId, setPreviewYtId] = useState(null);
-  const [playlistYtId, setPlaylistYtId] = useState(null);
   const [existingPlaylists, setExistingPlaylists] = useState([]);
   const [error, setError] = useState(null);
 
@@ -50,8 +48,6 @@ function DashboardContent() {
   const handleLogout = () => {
     localStorage.removeItem('youtube_token');
     setYoutubeToken(null);
-    setPreviewYtId(null);
-    setPlaylistYtId(null);
   };
 
   return (
@@ -103,33 +99,17 @@ function DashboardContent() {
         </div>
       ) : (
         <div>
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
-              <select 
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setPlaylistYtId(e.target.value);
-                    setPreviewYtId(null);
-                  }
-                }}
-                value={playlistYtId || ''}
-                style={{ padding: '8px', borderRadius: '4px', background: '#333', color: 'white', border: '1px solid #555', minWidth: '300px' }}
-              >
-                <option value="">▶️ Select a YouTube Playlist to play...</option>
-                {existingPlaylists.map(p => (
-                  <option key={p.id} value={p.id}>{p.snippet.title}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ height: '400px' }}>
-              <YouTubePlayer videoId={previewYtId} playlistId={playlistYtId} />
-            </div>
-          </div>
+          <CarPlayUI 
+            youtubeToken={youtubeToken} 
+            existingPlaylists={existingPlaylists} 
+          />
           <div className="sync-container">
             <PlaylistSync
               youtubeToken={youtubeToken}
-              onPreviewVideo={(id) => { setPreviewYtId(id); setPlaylistYtId(null); }}
-              onPlaylistSynced={(id) => { setPlaylistYtId(id); setPreviewYtId(null); }}
+              onPlaylistSynced={() => { 
+                // We could re-fetch playlists here, but page refresh is also fine.
+                // Or let CarPlayUI pick it up. For now, it will be in existingPlaylists on reload.
+              }}
             />
           </div>
         </div>

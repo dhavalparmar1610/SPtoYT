@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PlayCircle } from 'lucide-react';
 
-export default function YouTubePlayer({ videoId, playlistId }) {
+export default function YouTubePlayer({ videoId, playlistId, onPlayerReady }) {
   const playerRef = useRef(null);
   const [player, setPlayer] = useState(null);
 
@@ -33,6 +33,9 @@ export default function YouTubePlayer({ videoId, playlistId }) {
           'autoplay': 0,
         },
         events: {
+          'onReady': (event) => {
+             if (onPlayerReady) onPlayerReady(event.target);
+          },
           'onStateChange': onPlayerStateChange
         }
       });
