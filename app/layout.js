@@ -14,6 +14,12 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "Music Sync - Spotify to YouTube",
   description: "Seamlessly sync your Spotify playlists to YouTube",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Music Sync",
+  },
 };
 
 export default function RootLayout({ children }) {
