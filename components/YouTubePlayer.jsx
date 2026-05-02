@@ -131,7 +131,7 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
     : '';
 
   return (
-    <div style={{height: '100%', width: '100%', display: 'flex', flexDirection: 'column', position: 'relative', background: '#121212', overflow: 'hidden'}}>
+    <div style={{flex: 1, width: '100%', display: 'flex', flexDirection: 'column', position: 'relative', background: '#121212', overflow: 'hidden'}}>
       
       {/* DYNAMIC GLOW BACKGROUND */}
       {useCustomPlayer && artworkUrl && (
@@ -143,7 +143,7 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
       )}
 
       {/* CONTENT WRAPPER */}
-      <div style={{position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', flexDirection: isMini ? 'row' : 'column', alignItems: 'center', minHeight: 0}}>
+      <div style={{position: 'relative', zIndex: 1, width: '100%', height: '100%', flex: 1, display: 'flex', flexDirection: isMini ? 'row' : 'column', alignItems: 'center', minHeight: 0}}>
         
         {/* TOGGLE BUTTON */}
         {!isMini && (
@@ -189,12 +189,12 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
                   </p>
                 </div>
               ) : (
-                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#888', width: '100%', textAlign: 'center'}}>
-                  <div style={{width: '240px', height: '240px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.05)'}}>
-                     <ListMusic size={80} opacity={0.1} />
+                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fff', width: '100%', textAlign: 'center'}}>
+                  <div style={{width: '240px', height: '240px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)'}}>
+                     <ListMusic size={80} color="white" opacity={0.3} />
                   </div>
-                  <h2 style={{fontSize: '1.5rem', marginBottom: '8px', color: '#aaa'}}>Ready to Play</h2>
-                  <p style={{color: '#666'}}>Select a song from your playlist to start</p>
+                  <h2 style={{fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '8px', color: 'white'}}>Ready to Play</h2>
+                  <p style={{color: '#aaa', fontSize: '1.1rem'}}>Select a song to start your session</p>
                 </div>
               )}
             </div>

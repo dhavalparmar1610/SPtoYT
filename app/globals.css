@@ -602,7 +602,8 @@ body {
 .carplay-container {
   display: flex;
   flex: 1;
-  min-height: 0; /* Important for flex child scrolling */
+  min-height: 0;
+  height: 0; /* Force flex to control height */
   background: #181818;
   border-radius: 12px;
   overflow: hidden;
@@ -766,6 +767,8 @@ body {
   background: black;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 768px) {
