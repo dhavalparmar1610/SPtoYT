@@ -7,8 +7,11 @@ export default function Navigation({ activeTab, onTabChange, onLogout, onSearch,
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    setIsIOS(ios);
+    // Detect iOS — covers Safari, Chrome, Brave, Firefox on iOS (all use WebKit)
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad with desktop UA
+    setIsIOS(isIOSDevice);
+
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -20,7 +23,13 @@ export default function Navigation({ activeTab, onTabChange, onLogout, onSearch,
 
   const handleInstallClick = async () => {
     if (isIOS) {
-      alert('To install: Tap "Share" and "Add to Home Screen" in Safari.');
+      // On iOS, only Safari supports Add to Home Screen
+      const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|brave/i.test(navigator.userAgent);
+      if (isSafari) {
+        alert('Tap the Share button (box with arrow) at the bottom, then tap "Add to Home Screen".');
+      } else {
+        alert('To install this app on iOS:\n\n1. Open this page in Safari\n2. Tap the Share button (box with arrow)\n3. Tap "Add to Home Screen"\n\nNote: Only Safari supports installing web apps on iOS.');
+      }
       return;
     }
     if (!deferredPrompt) return;

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { SkipBack, SkipForward, Play as PlayIcon, Pause, Shuffle, Repeat, ListMusic, Tv } from 'lucide-react';
 import SilentAudioHack from './SilentAudioHack';
 
 export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMini, onToggleExpand }) {
   const playerRef = useRef(null);
-  const [player, setPlayer] = useState(null);
+  const playerInstanceRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
@@ -16,22 +16,57 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+  // Stable callback for state change handler
+  const onPlayerStateChange = useCallback((event) => {
+    const state = event.data;
+    if (state === window.YT.PlayerState.PLAYING) {
+      setIsPlaying(true);
+      const data = event.target.getVideoData();
+      setCurrentVideoData(data);
+      setDuration(event.target.getDuration());
+      
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+        if (data && data.title && data.video_id) {
+          try {
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: data.title,
+              artist: data.author || 'YouTube Music',
+              artwork: [
+                { src: `https://i.ytimg.com/vi/${data.video_id}/maxresdefault.jpg`, sizes: '1280x720', type: 'image/jpeg' },
+                { src: `https://i.ytimg.com/vi/${data.video_id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
+              ]
+            });
+          } catch (e) {
+            console.error('MediaSession metadata error:', e);
+          }
 
-      window.onYouTubeIframeAPIReady = () => {
-        initPlayer();
-      };
-    } else if (window.YT && window.YT.Player) {
-      initPlayer();
+          navigator.mediaSession.setActionHandler('play', () => {
+            event.target.playVideo();
+          });
+          navigator.mediaSession.setActionHandler('pause', () => {
+            event.target.pauseVideo();
+          });
+          navigator.mediaSession.setActionHandler('previoustrack', () => {
+            event.target.previousVideo();
+          });
+          navigator.mediaSession.setActionHandler('nexttrack', () => {
+            event.target.nextVideo();
+          });
+        }
+      }
+    } else if (state === window.YT.PlayerState.PAUSED || state === window.YT.PlayerState.ENDED) {
+      setIsPlaying(false);
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
     }
+  }, []);
 
+  // Initialize the YouTube IFrame player ONCE
+  useEffect(() => {
     function initPlayer() {
-      if (!playerRef.current) return;
+      if (!playerRef.current || playerInstanceRef.current) return;
       
       const newPlayer = new window.YT.Player(playerRef.current, {
         height: '100%',
@@ -53,58 +88,35 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
           'onStateChange': onPlayerStateChange
         }
       });
-      setPlayer(newPlayer);
+      playerInstanceRef.current = newPlayer;
     }
 
-    function onPlayerStateChange(event) {
-      const state = event.data;
-      if (state === window.YT.PlayerState.PLAYING) {
-        setIsPlaying(true);
-        const data = event.target.getVideoData();
-        setCurrentVideoData(data);
-        setDuration(event.target.getDuration());
-        
-        if ('mediaSession' in navigator) {
-          navigator.mediaSession.playbackState = 'playing';
-          if (data && data.title && data.video_id) {
-            try {
-              navigator.mediaSession.metadata = new MediaMetadata({
-                title: data.title,
-                artist: data.author || 'YouTube Music',
-                artwork: [
-                  { src: `https://i.ytimg.com/vi/${data.video_id}/maxresdefault.jpg`, sizes: '1280x720', type: 'image/jpeg' },
-                  { src: `https://i.ytimg.com/vi/${data.video_id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
-                ]
-              });
-            } catch (e) {
-              console.error('MediaSession metadata error:', e);
-            }
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-            navigator.mediaSession.setActionHandler('play', () => {
-              event.target.playVideo();
-            });
-            navigator.mediaSession.setActionHandler('pause', () => {
-              event.target.pauseVideo();
-            });
-            navigator.mediaSession.setActionHandler('previoustrack', () => {
-              event.target.previousVideo();
-            });
-            navigator.mediaSession.setActionHandler('nexttrack', () => {
-              event.target.nextVideo();
-            });
-          }
-        }
-      } else if (state === window.YT.PlayerState.PAUSED || state === window.YT.PlayerState.ENDED) {
-        setIsPlaying(false);
-        if ('mediaSession' in navigator) {
-          navigator.mediaSession.playbackState = 'paused';
-        }
+      window.onYouTubeIframeAPIReady = () => {
+        initPlayer();
+      };
+    } else if (window.YT && window.YT.Player) {
+      initPlayer();
+    }
+
+    // Cleanup on unmount only
+    return () => {
+      if (playerInstanceRef.current && typeof playerInstanceRef.current.destroy === 'function') {
+        playerInstanceRef.current.destroy();
+        playerInstanceRef.current = null;
       }
-    }
-
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Load new video/playlist when props change
   useEffect(() => {
+    const player = playerInstanceRef.current;
     if (!player) return;
     if (playlistId && typeof player.loadPlaylist === 'function') {
       player.loadPlaylist({
@@ -114,10 +126,12 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
     } else if (videoId && typeof player.loadVideoById === 'function') {
       player.loadVideoById(videoId);
     }
-  }, [videoId, playlistId, player]);
+  }, [videoId, playlistId]);
 
+  // Progress tracking interval
   useEffect(() => {
     let interval;
+    const player = playerInstanceRef.current;
     if (isPlaying && player) {
       interval = setInterval(() => {
         if (player.getCurrentTime) setProgress(player.getCurrentTime());
@@ -125,11 +139,12 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, player]);
+  }, [isPlaying]);
 
   const handleSeek = (e) => {
     const time = parseFloat(e.target.value);
     setProgress(time);
+    const player = playerInstanceRef.current;
     if (player && typeof player.seekTo === 'function') {
       player.seekTo(time, true);
     }
@@ -142,9 +157,14 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const player = playerInstanceRef.current;
+
   const artworkUrl = currentVideoData?.video_id 
     ? `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg` 
     : '';
+
+  // Determine if iframe should be shown visually (video mode + expanded)
+  const showIframeVisually = !isMini && !useCustomPlayer;
 
   return (
     <div className={`premium-player-container ${isMini ? 'mini-mode' : 'full-mode'}`}>
@@ -153,6 +173,16 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
       {!isMini && artworkUrl && (
         <div className="player-background-blur" style={{ backgroundImage: `url(${artworkUrl})` }} />
       )}
+
+      {/* 
+        CRITICAL: The iframe div is ALWAYS rendered. Never conditionally remove it.
+        When hidden, we move it off-screen with CSS so the YT player keeps playing.
+      */}
+      <div 
+        className={`youtube-iframe-persistent ${showIframeVisually ? 'iframe-visible' : 'iframe-hidden'}`}
+      >
+        <div ref={playerRef} style={{width: '100%', height: '100%'}} />
+      </div>
 
       <div className="player-content-wrapper">
         
@@ -170,10 +200,6 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
               >
                 <Tv size={16} /> {useCustomPlayer ? 'Video Mode' : 'Audio Mode'}
               </button>
-            </div>
-
-            <div className={`youtube-iframe-container ${useCustomPlayer ? 'hidden' : 'visible'}`}>
-              <div ref={playerRef} style={{width: '100%', height: '100%'}} />
             </div>
 
             {useCustomPlayer && (

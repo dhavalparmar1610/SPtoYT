@@ -1106,6 +1106,7 @@ body {
   backdrop-filter: blur(10px);
 }
 
+/* Old iframe container replaced by persistent version below */
 .youtube-iframe-container {
   width: 100%;
   height: 100%;
@@ -1118,6 +1119,31 @@ body {
   opacity: 0;
   pointer-events: none;
   width: 1px; height: 1px;
+}
+
+/* ── Persistent iframe: NEVER removed from DOM ──────── */
+.youtube-iframe-persistent {
+  z-index: 5;
+  transition: opacity 0.3s;
+}
+
+.youtube-iframe-persistent.iframe-visible {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 200px;
+  opacity: 1;
+}
+
+.youtube-iframe-persistent.iframe-hidden {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  left: -9999px;
+  top: -9999px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .audio-ui-container {
