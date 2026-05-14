@@ -9,6 +9,9 @@ import axios from 'axios';
  * Tries the official token endpoint first, then falls back to 'stealing' one from an embed page.
  */
 async function getAnonymousToken(playlistId = '37i9dQZF1DXcBWIGoYBM5M') {
+  console.log(`[Spotify API] Attempting to get token for playlist: ${playlistId}`);
+  
+  // Method 1: Official internal endpoint
   try {
     const res = await axios.get('https://open.spotify.com/get_access_token', {
       params: { reason: 'transport', productType: 'web_player' },
@@ -18,17 +21,47 @@ async function getAnonymousToken(playlistId = '37i9dQZF1DXcBWIGoYBM5M') {
       },
       timeout: 5000,
     });
-    if (res.data?.accessToken) return res.data.accessToken;
+    if (res.data?.accessToken) {
+      console.log('[Spotify API] Successfully obtained token via get_access_token');
+      return res.data.accessToken;
+    }
   } catch (e) {
-    console.warn('Primary token method failed, trying Embed theft...');
+    console.warn(`[Spotify API] Method 1 (get_access_token) failed: ${e.message}`);
   }
 
-  // Fallback: Steal token from the specific playlist's embed page
-  const embedRes = await axios.get(`https://open.spotify.com/embed/playlist/${playlistId}`, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' }
-  });
-  const match = embedRes.data.match(/accessToken":"(.+?)"/);
-  if (match) return match[1];
+  // Method 2: Fetch main page and extract config
+  try {
+    const pageRes = await axios.get('https://open.spotify.com/', {
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+      }
+    });
+    const tokenMatch = pageRes.data.match(/"accessToken":"(.+?)"/);
+    if (tokenMatch) {
+      console.log('[Spotify API] Successfully obtained token from main page');
+      return tokenMatch[1];
+    }
+  } catch (e) {
+    console.warn(`[Spotify API] Method 2 (main page) failed: ${e.message}`);
+  }
+
+  // Method 3: Fallback to Embed theft
+  console.log('[Spotify API] Trying Embed theft fallback...');
+  try {
+    const embedRes = await axios.get(`https://open.spotify.com/embed/playlist/${playlistId}`, {
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://open.spotify.com/'
+      }
+    });
+    const match = embedRes.data.match(/accessToken":"(.+?)"/);
+    if (match) {
+      console.log('[Spotify API] Successfully stolen token from Embed page');
+      return match[1];
+    }
+  } catch (e) {
+    console.error(`[Spotify API] Method 3 (Embed theft) failed: ${e.message}`);
+  }
 
   throw new Error('Failed to obtain a valid Spotify session token');
 }

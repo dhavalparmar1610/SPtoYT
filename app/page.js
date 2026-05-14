@@ -123,18 +123,8 @@ function DashboardContent() {
             />
             
             {activeTab === 'sync' && (
-              <div style={{ 
-                position: 'absolute', 
-                top: 0, 
-                left: 0, 
-                width: '100%', 
-                height: 'calc(100% - 100px)', 
-                overflowY: 'auto', 
-                background: '#0a0a0f', 
-                zIndex: 100, 
-                padding: '24px' 
-              }}>
-                <div style={{maxWidth: '900px', margin: '0 auto'}}>
+              <div className="sync-overlay">
+                <div className="sync-content-wrapper">
                   <PlaylistSync
                     youtubeToken={youtubeToken}
                     onPlaylistSynced={() => { 

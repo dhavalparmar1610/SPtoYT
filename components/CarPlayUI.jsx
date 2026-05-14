@@ -188,7 +188,7 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists, isMini }) {
   };
 
   return (
-    <div className="carplay-container" style={isMini ? { flexDirection: 'column', height: '100px', minHeight: '100px', position: 'absolute', bottom: 0, left: 0, width: '100%', zIndex: 20 } : {}}>
+    <div className="carplay-container" style={isMini ? { flexDirection: 'column', height: '100px', minHeight: '100px', position: 'fixed', bottom: 0, left: 0, width: '100%', zIndex: 1000, background: '#000', borderTop: '1px solid #333' } : {}}>
       {/* LEFT PANEL */}
       {!isMini && (
         <div className="carplay-sidebar">

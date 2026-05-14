@@ -221,12 +221,20 @@ export default function PlaylistSync({ youtubeToken, onPreviewVideo, onPlaylistS
       // Sync each track
       for (let i = 0; i < syncTracks.length; i++) {
         const track = syncTracks[i];
-        const query = `${track.name} ${track.artist} official audio`;
+        const query = `${track.name} ${track.artist}`;
+        console.log(`[Sync] Searching for: ${query}`);
 
         try {
+          // Use Music category (10) for more accurate results
           const searchRes = await axios.get('https://www.googleapis.com/youtube/v3/search', {
             headers: { Authorization: `Bearer ${youtubeToken}` },
-            params: { part: 'snippet', q: query, type: 'video', maxResults: 1 },
+            params: { 
+              part: 'snippet', 
+              q: query, 
+              type: 'video', 
+              videoCategoryId: '10',
+              maxResults: 1 
+            },
           });
 
           if (searchRes.data.items.length > 0) {
@@ -264,6 +272,13 @@ export default function PlaylistSync({ youtubeToken, onPreviewVideo, onPlaylistS
             setSyncState(prev => ({ ...prev, progress: i + 1, tracks: updatedTracks, isSyncing: false }));
             return; // STOP SYNC
           }
+
+          if (err.response?.status === 403) {
+            setLoadError('YouTube API Quota exceeded. Sync will continue for items already found, but searching is paused for today.');
+            track.status = 'failed';
+            setSyncState(prev => ({ ...prev, isSyncing: false }));
+            return; // STOP SYNC
+          }
           
           track.status = 'not_found';
         }
@@ -272,8 +287,8 @@ export default function PlaylistSync({ youtubeToken, onPreviewVideo, onPlaylistS
         updatedTracks[i] = { ...track };
         setSyncState(prev => ({ ...prev, progress: i + 1, tracks: updatedTracks }));
 
-        // Rate limit
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Rate limit - increased delay for reliability
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } catch (err) {
       console.error('Sync failed', err);

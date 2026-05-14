@@ -29,9 +29,11 @@
 
 html, body {
   height: 100%;
-  overflow: hidden;
   background-color: var(--bg-dark);
   color: var(--text-main);
+  /* Mobile scroll fix */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ── Animations ─────────────────────────────────────────── */
@@ -57,13 +59,12 @@ html, body {
 /* ── Layout ─────────────────────────────────────────────── */
 
 .app-container {
-  height: 100vh;
+  min-height: 100vh;
   padding: 16px;
   max-width: 1400px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   animation: fade-in 0.4s ease-out;
 }
 
@@ -618,6 +619,22 @@ html, body {
   }
   .landing h2 { font-size: 1.8rem; }
   .url-input-group { flex-direction: column; }
+  .header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 10px 0;
+  }
+  .header > div:first-child {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .logout-btn {
+    align-self: center;
+    margin-top: 4px;
+  }
 }
 
 /* ── CarPlay UI ─────────────────────────────────────────── */
@@ -798,29 +815,64 @@ html, body {
 }
 
 @media (max-width: 768px) {
-  .app-container {
+  .app-container, .dashboard-wrapper, .content-area {
     padding: 8px;
+    height: auto;
+    overflow: visible;
+    flex: none;
   }
   .carplay-container {
     flex-direction: column-reverse; /* Player at top, list at bottom */
     height: auto;
-    min-height: 0;
+    min-height: 100vh;
   }
   .carplay-sidebar {
     width: 100%;
     border-right: none;
     border-top: 1px solid #333;
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-    max-height: none;
+    flex: none; /* Let it grow with content or use its own scroll */
+    min-height: 400px;
   }
   .carplay-player-panel {
     width: 100%;
-    height: 40vh;
-    min-height: 280px;
+    height: 320px; /* Smaller fixed height for mobile */
     flex: none;
     border-bottom: 1px solid #333;
+    position: sticky;
+    top: 46px; /* Offset for the sticky tab-bar */
+    z-index: 10;
+  }
+  .tab-bar {
+    position: sticky;
+    top: 0;
+    background: var(--bg-dark);
+    z-index: 100;
+  }
+}
+
+/* ── Sync Overlay ───────────────────────────────────────── */
+
+.sync-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-dark);
+  z-index: 100;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sync-content-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 24px 120px; /* Extra bottom padding for mini player */
+}
+
+@media (max-width: 768px) {
+  .sync-content-wrapper {
+    padding: 16px;
   }
 }
 

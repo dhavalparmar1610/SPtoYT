@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { SkipBack, SkipForward, Play as PlayIcon, Pause, Shuffle, Repeat, ListMusic, Tv } from 'lucide-react';
+import SilentAudioHack from './SilentAudioHack';
 
 export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMini }) {
   const playerRef = useRef(null);
@@ -61,32 +62,67 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
         setDuration(event.target.getDuration());
         
         if ('mediaSession' in navigator) {
-          if (data && data.title) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-              title: data.title,
-              artist: data.author || 'YouTube Music',
-              artwork: [
-                { src: `https://i.ytimg.com/vi/${data.video_id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
-              ]
-            });
+          navigator.mediaSession.playbackState = 'playing';
+          if (data && data.title && data.video_id) {
+            try {
+              navigator.mediaSession.metadata = new MediaMetadata({
+                title: data.title,
+                artist: data.author || 'YouTube Music',
+                artwork: [
+                  { src: `https://i.ytimg.com/vi/${data.video_id}/maxresdefault.jpg`, sizes: '1280x720', type: 'image/jpeg' },
+                  { src: `https://i.ytimg.com/vi/${data.video_id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
+                ]
+              });
+            } catch (e) {
+              console.error('MediaSession metadata error:', e);
+            }
 
+            navigator.mediaSession.setActionHandler('play', () => {
+              event.target.playVideo();
+            });
+            navigator.mediaSession.setActionHandler('pause', () => {
+              event.target.pauseVideo();
+            });
             navigator.mediaSession.setActionHandler('previoustrack', () => {
               event.target.previousVideo();
             });
             navigator.mediaSession.setActionHandler('nexttrack', () => {
               event.target.nextVideo();
             });
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+              if (details.seekTime !== undefined) {
+                event.target.seekTo(details.seekTime, true);
+              }
+            });
           }
         }
       } else if (state === window.YT.PlayerState.PAUSED || state === window.YT.PlayerState.ENDED) {
         setIsPlaying(false);
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'paused';
+        }
       } else if (state === window.YT.PlayerState.UNSTARTED) {
         setProgress(0);
         const data = event.target.getVideoData();
         if (data && data.video_id) setCurrentVideoData(data);
       }
     }
+
   }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // Small delay to let the browser process the visibility change
+      setTimeout(() => {
+        if (document.visibilityState === 'hidden' && isPlaying && player) {
+          if (typeof player.playVideo === 'function') player.playVideo();
+        }
+      }, 100);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isPlaying, player]);
 
   useEffect(() => {
     let interval;
@@ -132,6 +168,7 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
 
   return (
     <div style={{flex: 1, width: '100%', display: 'flex', flexDirection: 'column', position: 'relative', background: '#121212', overflow: 'hidden'}}>
+      <SilentAudioHack isPlaying={isPlaying} />
       
       {/* DYNAMIC GLOW BACKGROUND */}
       {useCustomPlayer && artworkUrl && (
