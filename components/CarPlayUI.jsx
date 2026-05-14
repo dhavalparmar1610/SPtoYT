@@ -4,7 +4,16 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, Play, Loader2, Plus, X, Home, Heart, Library, PlusSquare, ArrowLeft } from 'lucide-react';
 
-export default function CarPlayUI({ youtubeToken, existingPlaylists, searchQuery, onSearch, onPlayVideo, onPlayPlaylist, activeTab, onTabChange }) {
+export default function CarPlayUI({ 
+  youtubeToken, 
+  existingPlaylists, 
+  searchQuery, 
+  onSearch, 
+  onPlayVideo, 
+  onPlayPlaylist, 
+  activeTab, 
+  onTabChange 
+}) {
   const [view, setView] = useState('discover');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -15,7 +24,7 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists, searchQuery
   const [isAdding, setIsAdding] = useState(false);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-
+  
   // Discover Sections
   const [trendingIndia, setTrendingIndia] = useState([]);
   const [trendingGlobal, setTrendingGlobal] = useState([]);
@@ -90,8 +99,15 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists, searchQuery
     if (youtubeToken) fetchHome();
   }, [youtubeToken]);
 
-  const handlePlay = (videoId) => {
-    onPlayVideo(videoId);
+  const extractVideoId = (item) => {
+    if (typeof item === 'string') return item;
+    return item.snippet?.resourceId?.videoId || item.id?.videoId || item.id;
+  };
+
+  const handlePlay = (videoId, items = [], index = 0) => {
+    const queue = items.map(item => extractVideoId(item)).filter(id => id && typeof id === 'string');
+    onPlayVideo(videoId, queue, index);
+    
     let recent = JSON.parse(localStorage.getItem('recently_played_videos') || '[]');
     recent = [videoId, ...recent.filter(id => id !== videoId)].slice(0, 15);
     localStorage.setItem('recently_played_videos', JSON.stringify(recent));
@@ -130,16 +146,20 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists, searchQuery
   const renderGrid = (items, isPlaylist = false) => (
     <div className="track-grid">
       {items.map((item, idx) => {
-        const id = isPlaylist ? item.id : (item.snippet?.resourceId?.videoId || item.id.videoId || item.id);
-        const title = item.snippet.title;
-        const author = item.snippet.channelTitle || item.snippet.videoOwnerChannelTitle;
-        const thumb = item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url;
+        const id = isPlaylist ? item.id : extractVideoId(item);
+        const title = item.snippet?.title || 'Unknown Title';
+        const author = item.snippet?.channelTitle || item.snippet?.videoOwnerChannelTitle || 'Unknown Artist';
+        const thumb = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
         if (title === 'Private video') return null;
 
         return (
-          <div key={id + idx} className="modern-track-card" onClick={() => isPlaylist ? (setSelectedPlaylistId(id), setView('tracks')) : handlePlay(id)}>
+          <div key={id + idx} className="modern-track-card" onClick={() => isPlaylist ? (setSelectedPlaylistId(id), setView('tracks')) : handlePlay(id, items, idx)}>
             <div className="card-thumb-wrapper">
-              <img src={thumb} alt="" className="card-thumb" />
+              {thumb ? (
+                <img src={thumb} alt="" className="card-thumb" />
+              ) : (
+                <div className="card-thumb-placeholder"><Home size={32} /></div>
+              )}
               <div className="card-overlay"><Play size={32} fill="white" color="white" /></div>
             </div>
             <div className="card-info">
@@ -203,12 +223,24 @@ export default function CarPlayUI({ youtubeToken, existingPlaylists, searchQuery
             <div className="modal-header"><h3>Add to Playlist</h3><button onClick={() => setAddingVideoId(null)}><X size={24} /></button></div>
             <div className="modal-list">
               {existingPlaylists.map(p => (
-                <button key={p.id} onClick={async () => {
-                  try {
-                    await axios.post('https://www.googleapis.com/youtube/v3/playlistItems?part=snippet', { snippet: { playlistId: p.id, resourceId: { kind: 'youtube#video', videoId: addingVideoId } } }, { headers: { Authorization: `Bearer ${youtubeToken}` } });
-                    setAddingVideoId(null);
-                  } catch (e) { alert('Failed to add.'); }
-                }}>{p.snippet.title}</button>
+                <button 
+                  key={p.id} 
+                  className="modal-item-btn"
+                  onClick={async () => {
+                    try {
+                      await axios.post('https://www.googleapis.com/youtube/v3/playlistItems?part=snippet', { 
+                        snippet: { 
+                          playlistId: p.id, 
+                          resourceId: { kind: 'youtube#video', videoId: addingVideoId } 
+                        } 
+                      }, { headers: { Authorization: `Bearer ${youtubeToken}` } });
+                      setAddingVideoId(null);
+                      alert('Added to ' + p.snippet.title);
+                    } catch (e) { alert('Failed to add.'); }
+                  }}
+                >
+                  {p.snippet.title}
+                </button>
               ))}
             </div>
           </div>

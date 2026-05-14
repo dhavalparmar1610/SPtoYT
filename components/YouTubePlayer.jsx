@@ -4,9 +4,25 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { SkipBack, SkipForward, Play as PlayIcon, Pause, Shuffle, Repeat, ListMusic, Tv } from 'lucide-react';
 import SilentAudioHack from './SilentAudioHack';
 
-export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMini, onToggleExpand }) {
+export default function YouTubePlayer({ 
+  videoId, 
+  playlistId, 
+  onPlayerReady, 
+  isMini, 
+  onToggleExpand,
+  queue = [],
+  initialIndex = 0
+}) {
   const playerRef = useRef(null);
   const playerInstanceRef = useRef(null);
+  
+  // Refs to store latest state for the callback to avoid stale closures
+  const isRepeatRef = useRef(false);
+  const isShuffleRef = useRef(false);
+  const playlistIdRef = useRef(playlistId);
+  const queueRef = useRef(queue);
+  const queueIndexRef = useRef(initialIndex);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
@@ -16,14 +32,23 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // Sync refs with state/props
+  useEffect(() => { isRepeatRef.current = isRepeat; }, [isRepeat]);
+  useEffect(() => { isShuffleRef.current = isShuffle; }, [isShuffle]);
+  useEffect(() => { playlistIdRef.current = playlistId; }, [playlistId]);
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+  useEffect(() => { queueIndexRef.current = initialIndex; }, [initialIndex]);
+
   // Stable callback for state change handler
   const onPlayerStateChange = useCallback((event) => {
     const state = event.data;
+    const player = event.target;
+
     if (state === window.YT.PlayerState.PLAYING) {
       setIsPlaying(true);
-      const data = event.target.getVideoData();
+      const data = player.getVideoData();
       setCurrentVideoData(data);
-      setDuration(event.target.getDuration());
+      setDuration(player.getDuration());
       
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
@@ -41,25 +66,40 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
             console.error('MediaSession metadata error:', e);
           }
 
-          navigator.mediaSession.setActionHandler('play', () => {
-            event.target.playVideo();
-          });
-          navigator.mediaSession.setActionHandler('pause', () => {
-            event.target.pauseVideo();
-          });
-          navigator.mediaSession.setActionHandler('previoustrack', () => {
-            event.target.previousVideo();
-          });
-          navigator.mediaSession.setActionHandler('nexttrack', () => {
-            event.target.nextVideo();
-          });
+          navigator.mediaSession.setActionHandler('play', () => player.playVideo());
+          navigator.mediaSession.setActionHandler('pause', () => player.pauseVideo());
+          navigator.mediaSession.setActionHandler('previoustrack', () => player.previousVideo());
+          navigator.mediaSession.setActionHandler('nexttrack', () => player.nextVideo());
         }
       }
-    } else if (state === window.YT.PlayerState.PAUSED || state === window.YT.PlayerState.ENDED) {
+    } else if (state === window.YT.PlayerState.ENDED) {
+      if (isRepeatRef.current) {
+        // Small delay helps avoid state conflicts during the ENDED transition
+        setTimeout(() => {
+          if (playerInstanceRef.current) {
+            playerInstanceRef.current.seekTo(0);
+            playerInstanceRef.current.playVideo();
+          }
+        }, 100);
+      } else {
+        setIsPlaying(false);
+        if (playlistIdRef.current || (queueRef.current && queueRef.current.length > 1)) {
+          player.nextVideo();
+        }
+      }
+      
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+    } else if (state === window.YT.PlayerState.PAUSED) {
       setIsPlaying(false);
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
+    } else if (state === window.YT.PlayerState.BUFFERING) {
+      setIsPlaying(true);
+    } else if (state === window.YT.PlayerState.UNSTARTED) {
+      setIsPlaying(false);
     }
   }, []);
 
@@ -71,19 +111,35 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
       const newPlayer = new window.YT.Player(playerRef.current, {
         height: '100%',
         width: '100%',
-        videoId: videoId || '',
+        videoId: videoId || (queue.length > 0 ? queue[initialIndex] : ''),
         playerVars: {
           'playsinline': 1,
           'autoplay': 1,
           'controls': 0,
           'disablekb': 1,
           'modestbranding': 1,
-          'rel': 0
+          'rel': 0,
+          'origin': window.location.origin
         },
         events: {
           'onReady': (event) => {
-             if (onPlayerReady) onPlayerReady(event.target);
-             if (videoId || playlistId) event.target.playVideo();
+             const p = event.target;
+             if (onPlayerReady) onPlayerReady(p);
+             
+             // If we have a playlist, load it
+             if (playlistId) {
+               p.loadPlaylist({
+                 list: playlistId,
+                 listType: 'playlist',
+                 index: initialIndex
+               });
+             } else if (queue && queue.length > 1) {
+               p.loadPlaylist(queue, initialIndex);
+             } else if (videoId) {
+               p.loadVideoById(videoId);
+             }
+             
+             p.playVideo();
           },
           'onStateChange': onPlayerStateChange
         }
@@ -104,7 +160,6 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
       initPlayer();
     }
 
-    // Cleanup on unmount only
     return () => {
       if (playerInstanceRef.current && typeof playerInstanceRef.current.destroy === 'function') {
         playerInstanceRef.current.destroy();
@@ -114,19 +169,29 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const lastLoadedRef = useRef('');
+
   // Load new video/playlist when props change
   useEffect(() => {
     const player = playerInstanceRef.current;
-    if (!player) return;
-    if (playlistId && typeof player.loadPlaylist === 'function') {
+    if (!player || typeof player.loadPlaylist !== 'function') return;
+
+    const currentLoadId = playlistId || videoId || (queue.length > 0 ? queue[initialIndex] : '');
+    if (lastLoadedRef.current === currentLoadId) return; // Prevent redundant loads
+    lastLoadedRef.current = currentLoadId;
+
+    if (playlistId) {
       player.loadPlaylist({
         list: playlistId,
-        listType: 'playlist'
+        listType: 'playlist',
+        index: initialIndex
       });
-    } else if (videoId && typeof player.loadVideoById === 'function') {
+    } else if (queue && queue.length > 1) {
+      player.loadPlaylist(queue, initialIndex);
+    } else if (videoId) {
       player.loadVideoById(videoId);
     }
-  }, [videoId, playlistId]);
+  }, [videoId, playlistId, initialIndex, queue]);
 
   // Progress tracking interval
   useEffect(() => {
@@ -147,6 +212,23 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
     const player = playerInstanceRef.current;
     if (player && typeof player.seekTo === 'function') {
       player.seekTo(time, true);
+      if (!isPlaying) player.playVideo();
+    }
+  };
+
+  const handleShuffleToggle = () => {
+    const newShuffle = !isShuffle;
+    setIsShuffle(newShuffle);
+    if (playerInstanceRef.current && typeof playerInstanceRef.current.setShuffle === 'function') {
+      playerInstanceRef.current.setShuffle(newShuffle);
+    }
+  };
+
+  const handleRepeatToggle = () => {
+    const newRepeat = !isRepeat;
+    setIsRepeat(newRepeat);
+    if (playerInstanceRef.current && typeof playerInstanceRef.current.setLoop === 'function') {
+      playerInstanceRef.current.setLoop(newRepeat);
     }
   };
 
@@ -160,10 +242,9 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
   const player = playerInstanceRef.current;
 
   const artworkUrl = currentVideoData?.video_id 
-    ? `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg` 
-    : '';
+    ? `https://i.ytimg.com/vi/${currentVideoData.video_id}/maxresdefault.jpg` 
+    : (videoId ? `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg` : '');
 
-  // Determine if iframe should be shown visually (video mode + expanded)
   const showIframeVisually = !isMini && !useCustomPlayer;
 
   return (
@@ -174,10 +255,7 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
         <div className="player-background-blur" style={{ backgroundImage: `url(${artworkUrl})` }} />
       )}
 
-      {/* 
-        CRITICAL: The iframe div is ALWAYS rendered. Never conditionally remove it.
-        When hidden, we move it off-screen with CSS so the YT player keeps playing.
-      */}
+      {/* Persistent IFrame */}
       <div 
         className={`youtube-iframe-persistent ${showIframeVisually ? 'iframe-visible' : 'iframe-hidden'}`}
       >
@@ -190,7 +268,7 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
         {!isMini && (
           <div className="full-player-layout">
             <div className="full-header">
-              <button onClick={onToggleExpand} className="minimize-btn">
+              <button onClick={onToggleExpand} className="minimize-btn" title="Minimize">
                 <SkipForward size={24} style={{transform: 'rotate(90deg)'}} />
               </button>
               <div className="now-playing-label">Now Playing</div>
@@ -202,13 +280,16 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
               </button>
             </div>
 
-            {useCustomPlayer && (
+            {useCustomPlayer ? (
               <div className="audio-visual-content">
                 <div className="album-art-section">
-                  {currentVideoData ? (
+                  {artworkUrl ? (
                     <img 
-                      src={`https://i.ytimg.com/vi/${currentVideoData.video_id}/maxresdefault.jpg`} 
-                      onError={(e) => { e.target.src = `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`; }}
+                      src={artworkUrl} 
+                      onError={(e) => { 
+                        if (currentVideoData?.video_id) e.target.src = `https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`;
+                        else if (videoId) e.target.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+                      }}
                       className="full-album-art"
                       alt=""
                     />
@@ -218,8 +299,8 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
                 </div>
 
                 <div className="track-meta-section">
-                  <h1 className="full-track-title">{currentVideoData?.title || 'Not Playing'}</h1>
-                  <p className="full-track-artist">{currentVideoData?.author || 'Unknown Artist'}</p>
+                  <h1 className="full-track-title">{currentVideoData?.title || 'Loading...'}</h1>
+                  <p className="full-track-artist">{currentVideoData?.author || 'YouTube Music'}</p>
                 </div>
 
                 <div className="full-controls-section">
@@ -230,16 +311,47 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
                   </div>
 
                   <div className="full-actions">
-                    <button className={`sub-control ${isShuffle ? 'active' : ''}`} onClick={() => {setIsShuffle(!isShuffle); player?.setShuffle(!isShuffle);}}><Shuffle size={24} /></button>
+                    <button 
+                      className={`sub-control ${isShuffle ? 'active' : ''}`} 
+                      onClick={handleShuffleToggle}
+                      title="Shuffle"
+                    >
+                      <Shuffle size={24} />
+                    </button>
                     <div className="main-btns">
-                      <button className="nav-btn" onClick={() => player?.previousVideo()}><SkipBack size={36} fill="white" /></button>
-                      <button className="play-pause-circle" onClick={() => isPlaying ? player?.pauseVideo() : player?.playVideo()}>
+                      <button className="nav-btn" onClick={() => player?.previousVideo()} title="Previous"><SkipBack size={36} fill="white" /></button>
+                      <button className="play-pause-circle" onClick={() => isPlaying ? player?.pauseVideo() : player?.playVideo()} title={isPlaying ? "Pause" : "Play"}>
                         {isPlaying ? <Pause size={36} fill="black" /> : <PlayIcon size={36} fill="black" style={{marginLeft: '4px'}} />}
                       </button>
-                      <button className="nav-btn" onClick={() => player?.nextVideo()}><SkipForward size={36} fill="white" /></button>
+                      <button className="nav-btn" onClick={() => player?.nextVideo()} title="Next"><SkipForward size={36} fill="white" /></button>
                     </div>
-                    <button className={`sub-control ${isRepeat ? 'active' : ''}`} onClick={() => {setIsRepeat(!isRepeat); player?.setLoop(!isRepeat);}}><Repeat size={24} /></button>
+                    <button 
+                      className={`sub-control ${isRepeat ? 'active' : ''}`} 
+                      onClick={handleRepeatToggle}
+                      title="Repeat"
+                    >
+                      <Repeat size={24} />
+                    </button>
                   </div>
+                </div>
+              </div>
+            ) : (
+              <div className="video-mode-content">
+                <div className="video-container-placeholder">
+                  {/* The actual iframe is absolutely positioned behind/over this area */}
+                </div>
+                <div className="track-meta-section" style={{ marginTop: '20px' }}>
+                  <h1 className="full-track-title">{currentVideoData?.title || 'Loading...'}</h1>
+                  <p className="full-track-artist">{currentVideoData?.author || 'YouTube Music'}</p>
+                </div>
+                <div className="full-actions" style={{ marginTop: 'auto', marginBottom: '20px' }}>
+                   <div className="main-btns">
+                      <button className="nav-btn" onClick={() => player?.previousVideo()} title="Previous"><SkipBack size={36} fill="white" /></button>
+                      <button className="play-pause-circle" onClick={() => isPlaying ? player?.pauseVideo() : player?.playVideo()} title={isPlaying ? "Pause" : "Play"}>
+                        {isPlaying ? <Pause size={36} fill="black" /> : <PlayIcon size={36} fill="black" style={{marginLeft: '4px'}} />}
+                      </button>
+                      <button className="nav-btn" onClick={() => player?.nextVideo()} title="Next"><SkipForward size={36} fill="white" /></button>
+                    </div>
                 </div>
               </div>
             )}
@@ -251,12 +363,12 @@ export default function YouTubePlayer({ videoId, playlistId, onPlayerReady, isMi
           <div className="mini-player-layout" onClick={onToggleExpand}>
             <div className="mini-progress-line" style={{ width: `${(progress / duration) * 100}%` }} />
             <div className="mini-main-content">
-              {currentVideoData ? (
+              {(currentVideoData || videoId) ? (
                 <>
-                  <img src={`https://i.ytimg.com/vi/${currentVideoData.video_id}/hqdefault.jpg`} className="mini-thumb" alt="" />
+                  <img src={`https://i.ytimg.com/vi/${currentVideoData?.video_id || videoId}/hqdefault.jpg`} className="mini-thumb" alt="" />
                   <div className="mini-info">
-                    <div className="mini-title">{currentVideoData.title}</div>
-                    <div className="mini-artist">{currentVideoData.author}</div>
+                    <div className="mini-title">{currentVideoData?.title || 'Loading...'}</div>
+                    <div className="mini-artist">{currentVideoData?.author || 'YouTube Music'}</div>
                   </div>
                   <div className="mini-actions" onClick={(e) => e.stopPropagation()}>
                     <button className="mini-btn" onClick={() => isPlaying ? player?.pauseVideo() : player?.playVideo()}>

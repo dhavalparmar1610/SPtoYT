@@ -1130,9 +1130,14 @@ body {
 .youtube-iframe-persistent.iframe-visible {
   position: relative;
   width: 100%;
-  flex: 1;
-  min-height: 200px;
+  height: 50vh; /* Take up half the screen height in Video Mode */
+  min-height: 300px;
+  max-height: 60vh;
   opacity: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  margin-bottom: 20px;
 }
 
 .youtube-iframe-persistent.iframe-hidden {
@@ -1144,6 +1149,19 @@ body {
   opacity: 0;
   pointer-events: none;
   overflow: hidden;
+}
+
+.video-mode-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+}
+
+.video-container-placeholder {
+  width: 100%;
+  height: 50vh; /* Matches the iframe size */
+  min-height: 300px;
 }
 
 .audio-ui-container {

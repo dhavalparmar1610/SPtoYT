@@ -338,14 +338,18 @@ html, body {
   .persistent-bottom-player.expanded {
     height: 100svh !important;
     border-radius: 0 !important;
+    overflow-y: auto !important; /* Allow the drawer to scroll if content is tall */
+    -webkit-overflow-scrolling: touch;
   }
 
   .full-player-layout {
-    padding: 20px 20px 32px !important;
+    padding: 20px 20px 110px !important; /* SIGNIFICANT bottom padding for browser bars */
     display: flex !important;
     flex-direction: column !important;
-    gap: 14px !important;
-    height: calc(100% - 28px) !important; /* subtract drag handle */
+    gap: 10px !important;
+    min-height: 100dvh !important;
+    height: auto !important; 
+    box-sizing: border-box !important;
   }
 
   .full-header {
@@ -361,8 +365,9 @@ html, body {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 !important;
-    justify-content: space-around !important;
-    gap: 16px !important;
+    justify-content: flex-start !important; /* Start from top to avoid pushing controls off-screen */
+    gap: 20px !important;
+    padding-top: 10px !important;
   }
 
   .album-art-section {
@@ -371,11 +376,12 @@ html, body {
   }
 
   .full-album-art {
-    width: min(240px, 72vw) !important;
-    height: min(240px, 72vw) !important;
+    width: min(200px, 60vw) !important; /* Slightly smaller to fit more content */
+    height: min(200px, 60vw) !important;
     border-radius: 16px !important;
     display: block !important;
     margin: 0 auto !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
   }
 
   .full-art-placeholder {
@@ -397,6 +403,11 @@ html, body {
     font-size: 1.25rem !important;
     line-height: 1.3 !important;
     margin-bottom: 4px !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    max-height: 3.4em !important;
   }
 
   .full-track-artist {
@@ -426,8 +437,11 @@ html, body {
   .full-actions {
     display: flex !important;
     align-items: center !important;
-    justify-content: center !important;
-    gap: 16px !important;
+    justify-content: space-between !important; /* Spread them out */
+    width: 100% !important;
+    max-width: 340px !important;
+    margin: 0 auto !important;
+    gap: 10px !important;
   }
 
   .play-pause-circle {
@@ -438,7 +452,8 @@ html, body {
   .main-btns {
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
+    gap: 16px !important; /* Adjusted gap */
+    flex-shrink: 0 !important;
   }
 
   .nav-btn {

@@ -22,7 +22,8 @@ function DashboardContent() {
   // GLOBAL PLAYER STATE
   const [activeVideoId, setActiveVideoId] = useState(null);
   const [activePlaylistId, setActivePlaylistId] = useState(null);
-  const [playingIndex, setPlayingIndex] = useState(-1);
+  const [activeQueue, setActiveQueue] = useState([]);
+  const [playingIndex, setPlayingIndex] = useState(0);
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
 
   useEffect(() => {
@@ -53,16 +54,18 @@ function DashboardContent() {
     setYoutubeToken(null);
   };
 
-  const handlePlayVideo = (videoId) => {
+  const handlePlayVideo = (videoId, queue = [], index = 0) => {
     setActivePlaylistId(null);
     setActiveVideoId(videoId);
-    setPlayingIndex(-1);
+    setActiveQueue(queue);
+    setPlayingIndex(index);
     setIsPlayerExpanded(true);
   };
 
   const handlePlayPlaylist = (playlistId, index = 0) => {
     setActivePlaylistId(playlistId);
     setActiveVideoId(null);
+    setActiveQueue([]);
     setPlayingIndex(index);
     setIsPlayerExpanded(true);
   };
@@ -110,7 +113,7 @@ function DashboardContent() {
           </div>
 
           {/* PERSISTENT BOTTOM PLAYER */}
-          {(activeVideoId || activePlaylistId) && (
+          {(activeVideoId || activePlaylistId || activeQueue.length > 0) && (
             <div className={`persistent-bottom-player ${isPlayerExpanded ? 'expanded' : 'minimized'}`}>
                {isPlayerExpanded && (
                  <div className="player-drag-handle" onClick={() => setIsPlayerExpanded(false)}>
@@ -120,6 +123,7 @@ function DashboardContent() {
                <YouTubePlayer 
                  videoId={activeVideoId} 
                  playlistId={activePlaylistId} 
+                 queue={activeQueue}
                  initialIndex={playingIndex}
                  isMini={!isPlayerExpanded}
                  onToggleExpand={() => setIsPlayerExpanded(!isPlayerExpanded)}
