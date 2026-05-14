@@ -14,14 +14,16 @@ export async function fetchPlaylistViaEmbed(playlistId) {
     const res = await axios.get(mainUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      }
+      },
+      timeout: 10000,
     });
     html = res.data;
   } catch (e) {
     const res = await axios.get(embedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      }
+      },
+      timeout: 10000,
     });
     html = res.data;
   }

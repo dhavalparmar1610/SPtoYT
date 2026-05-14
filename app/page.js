@@ -7,14 +7,23 @@ import CarPlayUI from '@/components/CarPlayUI';
 import { Music, PlayCircle } from 'lucide-react';
 import axios from 'axios';
 
+import Navigation from '@/components/Navigation';
+import YouTubePlayer from '@/components/YouTubePlayer';
+
 function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const [youtubeToken, setYoutubeToken] = useState(null);
   const [existingPlaylists, setExistingPlaylists] = useState([]);
-  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('player');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // GLOBAL PLAYER STATE
+  const [activeVideoId, setActiveVideoId] = useState(null);
+  const [activePlaylistId, setActivePlaylistId] = useState(null);
+  const [playingIndex, setPlayingIndex] = useState(-1);
+  const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
 
   useEffect(() => {
     if (youtubeToken) {
@@ -28,20 +37,13 @@ function DashboardContent() {
   }, [youtubeToken]);
 
   useEffect(() => {
-    const yToken = searchParams.get('youtube_access_token');
-    const urlError = searchParams.get('error');
-
-    if (urlError) setError(urlError);
-
-    if (yToken) {
-      localStorage.setItem('youtube_token', yToken);
-      setYoutubeToken(yToken);
-    } else {
-      const stored = localStorage.getItem('youtube_token');
-      if (stored) setYoutubeToken(stored);
-    }
-
-    if (yToken) {
+    const storedToken = localStorage.getItem('youtube_token');
+    if (storedToken) setYoutubeToken(storedToken);
+    
+    const token = searchParams.get('youtube_access_token');
+    if (token) {
+      localStorage.setItem('youtube_token', token);
+      setYoutubeToken(token);
       router.replace('/');
     }
   }, [searchParams, router]);
@@ -51,75 +53,42 @@ function DashboardContent() {
     setYoutubeToken(null);
   };
 
+  const handlePlayVideo = (videoId) => {
+    setActivePlaylistId(null);
+    setActiveVideoId(videoId);
+    setPlayingIndex(-1);
+    setIsPlayerExpanded(true);
+  };
+
+  const handlePlayPlaylist = (playlistId, index = 0) => {
+    setActivePlaylistId(playlistId);
+    setActiveVideoId(null);
+    setPlayingIndex(index);
+    setIsPlayerExpanded(true);
+  };
+
   return (
     <main className="app-container">
-      <header className="header">
-        <div className="logo-group">
-          <div className="logo-icon">
-            <Music color="white" size={24} />
-          </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Music Sync</h1>
-          <span className="header-badge">Public Mode</span>
-        </div>
-
-        {youtubeToken && (
-          <button onClick={handleLogout} className="logout-btn">
-            Logout YouTube
-          </button>
-        )}
-      </header>
-
-      {error && (
-        <div className="error-msg">
-          <span>⚠️ Error: {error}</span>
-          <button onClick={() => setError(null)} className="error-dismiss">✕</button>
-        </div>
-      )}
-
-      {!youtubeToken ? (
-        <div className="landing">
-          <div className="landing-glow" />
-          <h2>Sync Spotify → YouTube</h2>
-          <p>
-            Paste any <strong>public</strong> Spotify playlist URL and sync it to your YouTube account.
-            <br />
-            No Spotify login required.
-          </p>
-
-          <div className="auth-buttons">
-            <a href="/api/auth/youtube" className="auth-btn youtube" id="connect-youtube-btn">
-              <PlayCircle size={24} />
-              Connect YouTube
-            </a>
-          </div>
-
-          <div className="landing-note">
-            <Music size={14} />
-            <span>Works with any public Spotify playlist — no Spotify Premium needed</span>
-          </div>
-        </div>
-      ) : (
+      {youtubeToken ? (
         <div className="dashboard-wrapper">
-          <div className="tab-bar" style={{ display: 'flex', gap: '32px', padding: '0 8px', borderBottom: '1px solid #333' }}>
-            <button 
-              onClick={() => setActiveTab('player')} 
-              style={{ background: 'none', border: 'none', color: activeTab === 'player' ? 'white' : '#888', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', padding: '12px 0', borderBottom: activeTab === 'player' ? '2px solid var(--spotify-green)' : '2px solid transparent' }}
-            >
-              Music Player
-            </button>
-            <button 
-              onClick={() => setActiveTab('sync')} 
-              style={{ background: 'none', border: 'none', color: activeTab === 'sync' ? 'white' : '#888', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', padding: '12px 0', borderBottom: activeTab === 'sync' ? '2px solid var(--spotify-green)' : '2px solid transparent' }}
-            >
-              Playlist Sync
-            </button>
-          </div>
+          <Navigation 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab} 
+            onLogout={handleLogout}
+            searchQuery={searchQuery}
+            onSearch={setSearchQuery}
+          />
 
           <div className="content-area">
             <CarPlayUI 
               youtubeToken={youtubeToken} 
               existingPlaylists={existingPlaylists} 
-              isMini={activeTab === 'sync'}
+              searchQuery={searchQuery}
+              onSearch={setSearchQuery}
+              onPlayVideo={handlePlayVideo}
+              onPlayPlaylist={handlePlayPlaylist}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
             />
             
             {activeTab === 'sync' && (
@@ -127,6 +96,7 @@ function DashboardContent() {
                 <div className="sync-content-wrapper">
                   <PlaylistSync
                     youtubeToken={youtubeToken}
+                    onClose={() => setActiveTab('player')}
                     onPlaylistSynced={() => { 
                       axios.get('https://www.googleapis.com/youtube/v3/playlists', {
                         headers: { Authorization: `Bearer ${youtubeToken}` },
@@ -137,6 +107,38 @@ function DashboardContent() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* PERSISTENT BOTTOM PLAYER */}
+          {(activeVideoId || activePlaylistId) && (
+            <div className={`persistent-bottom-player ${isPlayerExpanded ? 'expanded' : 'minimized'}`}>
+               {isPlayerExpanded && (
+                 <div className="player-drag-handle" onClick={() => setIsPlayerExpanded(false)}>
+                   <div className="handle-bar" />
+                 </div>
+               )}
+               <YouTubePlayer 
+                 videoId={activeVideoId} 
+                 playlistId={activePlaylistId} 
+                 initialIndex={playingIndex}
+                 isMini={!isPlayerExpanded}
+                 onToggleExpand={() => setIsPlayerExpanded(!isPlayerExpanded)}
+               />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="landing">
+          <div className="landing-glow" />
+          <div className="landing-content">
+            <div className="landing-icon">🎵</div>
+            <h1>Music Sync PWA</h1>
+            <p>Your Spotify Library on YouTube Music interface.</p>
+            <div className="auth-buttons">
+              <a href="/api/auth/youtube" className="auth-btn youtube">
+                <PlayCircle size={24} /> Connect YouTube
+              </a>
+            </div>
           </div>
         </div>
       )}

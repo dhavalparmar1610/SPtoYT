@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./mobile.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,20 +13,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Music Sync - Spotify to YouTube",
-  description: "Seamlessly sync your Spotify playlists to YouTube",
+  title: "Music Sync",
+  description: "Synchronize your Spotify playlists to YouTube Music seamlessly.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Music Sync",
   },
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo-512.png',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  themeColor: "#0070f3",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

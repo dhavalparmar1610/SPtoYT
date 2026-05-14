@@ -34,7 +34,8 @@ async function getAnonymousToken(playlistId = '37i9dQZF1DXcBWIGoYBM5M') {
     const pageRes = await axios.get('https://open.spotify.com/', {
       headers: { 
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-      }
+      },
+      timeout: 8000,
     });
     const tokenMatch = pageRes.data.match(/"accessToken":"(.+?)"/);
     if (tokenMatch) {
@@ -52,7 +53,8 @@ async function getAnonymousToken(playlistId = '37i9dQZF1DXcBWIGoYBM5M') {
       headers: { 
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Referer': 'https://open.spotify.com/'
-      }
+      },
+      timeout: 8000,
     });
     const match = embedRes.data.match(/accessToken":"(.+?)"/);
     if (match) {
@@ -99,11 +101,29 @@ export async function GET(request) {
     // 1. Get a token (either normally or stolen from embed)
     const token = await getAnonymousToken(playlistId);
 
-    // 2. Fetch playlist metadata and FIRST page (100 tracks)
-    const playlistRes = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { fields: 'id,name,description,images,tracks(total,items(track(name,artists(name),album(name,images),duration_ms)))' },
-    });
+    // 2. Fetch playlist metadata (with retry)
+    let playlistRes;
+    let retries = 0;
+    while (retries < 3) {
+      try {
+        playlistRes = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { fields: 'id,name,description,images,tracks(total,items(track(name,artists(name),album(name,images),duration_ms)))' },
+          timeout: 10000,
+        });
+        break;
+      } catch (e) {
+        if (e.response?.status === 429 && retries < 2) {
+          // Limit wait time to avoid hanging the request
+          const retryAfter = Math.min(parseInt(e.response.headers['retry-after'] || '2'), 5) * 1000;
+          console.warn(`[Spotify API] 429 hit. Retrying after ${retryAfter}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryAfter + Math.random() * 1000));
+          retries++;
+        } else {
+          throw e;
+        }
+      }
+    }
 
     const playlist = playlistRes.data;
     if (!playlist.tracks) throw new Error('Playlist data is incomplete or private');
@@ -120,44 +140,49 @@ export async function GET(request) {
       };
     }).filter(Boolean);
 
-    // 3. If there are more than 100 tracks, fetch remaining in parallel
+    // 3. Sequential fetching for remaining tracks to avoid 429
     if (totalTracks > allTracks.length) {
       const remainingCount = totalTracks - allTracks.length;
       const remainingPages = Math.ceil(remainingCount / 100);
-      const pagePromises = [];
 
       for (let i = 1; i <= remainingPages; i++) {
         const offset = i * 100;
-        pagePromises.push(
-          axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+        console.log(`[Spotify API] Fetching page ${i+1} (offset ${offset})...`);
+        
+        try {
+          const res = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
             headers: { Authorization: `Bearer ${token}` },
             params: {
               offset,
               limit: 100,
               fields: 'items(track(name,artists(name),album(name,images),duration_ms))',
             },
-          }).catch(e => {
-            console.error(`Failed to fetch page at offset ${offset}:`, e.message);
-            return null; // Don't crash the whole thing
-          })
-        );
-      }
+          });
 
-      const results = await Promise.all(pagePromises);
-      results.forEach(res => {
-        if (!res?.data?.items) return;
-        res.data.items.forEach(item => {
-          if (item?.track?.name) {
-            allTracks.push({
-              name: item.track.name,
-              artist: item.track.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
-              album: item.track.album?.name || '',
-              albumArt: item.track.album?.images?.[0]?.url || null,
-              duration_ms: item.track.duration_ms || 0,
+          if (res.data?.items) {
+            res.data.items.forEach(item => {
+              if (item?.track?.name) {
+                allTracks.push({
+                  name: item.track.name,
+                  artist: item.track.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+                  album: item.track.album?.name || '',
+                  albumArt: item.track.album?.images?.[0]?.url || null,
+                  duration_ms: item.track.duration_ms || 0,
+                });
+              }
             });
           }
-        });
-      });
+          
+          // Small delay between pages to be gentle
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (e) {
+          console.error(`Failed to fetch page at offset ${offset}:`, e.message);
+          if (e.response?.status === 429) {
+             console.warn('[Spotify API] 429 hit during pagination. Stopping here.');
+             break; // Return what we have
+          }
+        }
+      }
     }
 
     return NextResponse.json({
