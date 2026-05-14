@@ -343,7 +343,7 @@ html, body {
   }
 
   .full-player-layout {
-    padding: 20px 20px 110px !important; /* SIGNIFICANT bottom padding for browser bars */
+    padding: max(20px, env(safe-area-inset-top)) 20px max(130px, env(safe-area-inset-bottom) + 80px) !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 10px !important;

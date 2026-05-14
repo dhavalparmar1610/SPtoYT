@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { SkipBack, SkipForward, Play as PlayIcon, Pause, Shuffle, Repeat, ListMusic, Tv } from 'lucide-react';
+import { SkipBack, SkipForward, Play as PlayIcon, Pause, Shuffle, Repeat, ListMusic, Tv, ChevronDown } from 'lucide-react';
 import SilentAudioHack from './SilentAudioHack';
 
 export default function YouTubePlayer({ 
@@ -74,15 +74,17 @@ export default function YouTubePlayer({
       }
     } else if (state === window.YT.PlayerState.ENDED) {
       if (isRepeatRef.current) {
-        // Small delay helps avoid state conflicts during the ENDED transition
-        setTimeout(() => {
-          if (playerInstanceRef.current) {
-            playerInstanceRef.current.seekTo(0);
-            playerInstanceRef.current.playVideo();
-          }
-        }, 100);
+        // Force restart of current video to override playlist auto-advance
+        const currentId = player.getVideoData()?.video_id;
+        if (currentId) {
+          player.loadVideoById(currentId);
+        } else {
+          player.seekTo(0);
+          player.playVideo();
+        }
       } else {
         setIsPlaying(false);
+        // If it's a playlist or we have a manual queue, try to go next
         if (playlistIdRef.current || (queueRef.current && queueRef.current.length > 1)) {
           player.nextVideo();
         }
@@ -176,8 +178,8 @@ export default function YouTubePlayer({
     const player = playerInstanceRef.current;
     if (!player || typeof player.loadPlaylist !== 'function') return;
 
-    const currentLoadId = playlistId || videoId || (queue.length > 0 ? queue[initialIndex] : '');
-    if (lastLoadedRef.current === currentLoadId) return; // Prevent redundant loads
+    const currentLoadId = (playlistId || '') + (videoId || '') + (queue.length) + initialIndex;
+    if (lastLoadedRef.current === currentLoadId) return; 
     lastLoadedRef.current = currentLoadId;
 
     if (playlistId) {
@@ -193,15 +195,27 @@ export default function YouTubePlayer({
     }
   }, [videoId, playlistId, initialIndex, queue]);
 
-  // Progress tracking interval
+  // Progress tracking interval & Proactive Repeat Detection
   useEffect(() => {
     let interval;
     const player = playerInstanceRef.current;
     if (isPlaying && player) {
       interval = setInterval(() => {
-        if (player.getCurrentTime) setProgress(player.getCurrentTime());
-        if (player.getDuration) setDuration(player.getDuration());
-      }, 1000);
+        if (!player.getCurrentTime || !player.getDuration) return;
+        
+        const currentTime = player.getCurrentTime();
+        const totalTime = player.getDuration();
+        
+        setProgress(currentTime);
+        setDuration(totalTime);
+
+        // PROACTIVE REPEAT: If we are near the end and repeat is on, 
+        // restart BEFORE the YouTube player's native playlist logic kicks in.
+        if (isRepeatRef.current && totalTime > 5 && currentTime > 5 && (totalTime - currentTime) < 1.5) {
+          player.seekTo(0);
+          player.playVideo();
+        }
+      }, 500); // Higher frequency for accurate repeat detection
     }
     return () => clearInterval(interval);
   }, [isPlaying]);
@@ -219,6 +233,8 @@ export default function YouTubePlayer({
   const handleShuffleToggle = () => {
     const newShuffle = !isShuffle;
     setIsShuffle(newShuffle);
+    if (newShuffle) setIsRepeat(false); // Mutual exclusion
+    
     if (playerInstanceRef.current && typeof playerInstanceRef.current.setShuffle === 'function') {
       playerInstanceRef.current.setShuffle(newShuffle);
     }
@@ -227,6 +243,8 @@ export default function YouTubePlayer({
   const handleRepeatToggle = () => {
     const newRepeat = !isRepeat;
     setIsRepeat(newRepeat);
+    if (newRepeat) setIsShuffle(false); // Mutual exclusion
+    
     if (playerInstanceRef.current && typeof playerInstanceRef.current.setLoop === 'function') {
       playerInstanceRef.current.setLoop(newRepeat);
     }
@@ -269,7 +287,7 @@ export default function YouTubePlayer({
           <div className="full-player-layout">
             <div className="full-header">
               <button onClick={onToggleExpand} className="minimize-btn" title="Minimize">
-                <SkipForward size={24} style={{transform: 'rotate(90deg)'}} />
+                <ChevronDown size={24} />
               </button>
               <div className="now-playing-label">Now Playing</div>
               <button 
@@ -306,7 +324,14 @@ export default function YouTubePlayer({
                 <div className="full-controls-section">
                   <div className="full-progress-container">
                     <span className="time-label">{formatTime(progress)}</span>
-                    <input type="range" min={0} max={duration || 100} value={progress} onChange={handleSeek} className="premium-range-slider" />
+                    <input 
+                      type="range" 
+                      min={0} 
+                      max={duration || 100} 
+                      value={progress || 0} 
+                      onChange={handleSeek} 
+                      className="premium-range-slider" 
+                    />
                     <span className="time-label">{formatTime(duration)}</span>
                   </div>
 
