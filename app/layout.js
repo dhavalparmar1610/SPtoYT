@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Music Sync",
-  description: "Synchronize your Spotify playlists to YouTube Music seamlessly.",
+  title: "Music Sync — Spotify to YouTube Music",
+  description: "Synchronize your Spotify playlists to YouTube Music with an authentic Spotify player experience.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Music Sync",
   },
   icons: {
@@ -28,12 +28,24 @@ export const metadata = {
   formatDetection: {
     telephone: false,
   },
-  themeColor: "#0070f3",
+};
+
+export const viewport = {
+  themeColor: "#121212",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
       <body suppressHydrationWarning>
         {children}
         <script

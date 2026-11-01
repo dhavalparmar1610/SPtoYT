@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import { saveSession } from '@/lib/db';
 
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
@@ -15,7 +16,7 @@ export async function GET(request) {
   const storedState = request.cookies.get('spotify_auth_state')?.value;
 
   if (error) {
-    return NextResponse.redirect(`${NEXT_PUBLIC_APP_URL}/?error=${error}`);
+    return NextResponse.redirect(`${NEXT_PUBLIC_APP_URL}/?error=${encodeURIComponent(error)}`);
   }
 
   if (state === null || state !== storedState) {
@@ -39,11 +40,20 @@ export async function GET(request) {
 
     const { access_token, refresh_token, expires_in } = tokenResponse.data;
 
+    // Save to SQLite
+    saveSession({
+      spotify_access_token: access_token,
+      spotify_refresh_token: refresh_token,
+      spotify_expiry_date: Date.now() + (expires_in * 1000)
+    }, 'default');
+
     // Redirect back to frontend with tokens in URL
     const redirectUrl = new URL(NEXT_PUBLIC_APP_URL);
     redirectUrl.searchParams.append('spotify_access_token', access_token);
-    redirectUrl.searchParams.append('spotify_refresh_token', refresh_token);
-    redirectUrl.searchParams.append('spotify_expires_in', expires_in);
+    if (refresh_token) {
+      redirectUrl.searchParams.append('spotify_refresh_token', refresh_token);
+    }
+    redirectUrl.searchParams.append('spotify_expires_in', expires_in.toString());
 
     const response = NextResponse.redirect(redirectUrl.toString());
     response.cookies.delete('spotify_auth_state');

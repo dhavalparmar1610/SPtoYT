@@ -1,487 +1,419 @@
 /* ═══════════════════════════════════════════════════════════
-   COMPREHENSIVE MOBILE RESPONSIVE — FINAL
+   SPOTIFY RESPONSIVE DESIGN SYSTEM
+   Supports Mobile Phones (iPhone), Tablets, Laptops & TVs
    ═══════════════════════════════════════════════════════════ */
 
-/* Fix root overflow — prevents horizontal scroll and white side gaps */
-html, body {
-  max-width: 100% !important;
-  width: 100% !important;
-  overflow-x: hidden !important;
-  margin: 0 !important;
-  padding: 0 !important;
+/* ── TABLET & TV BREAKPOINTS (769px - 1100px) ────────────── */
+@media (max-width: 1100px) {
+  :root {
+    --sidebar-width: 200px;
+  }
+
+  .spotify-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+  }
+
+  .search-results-layout {
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+  }
+
+  .playlist-hero-art {
+    width: 170px;
+    height: 170px;
+  }
+
+  .hero-title {
+    font-size: 2.4rem;
+  }
 }
 
-/* ── Core layout: stop using 100vh (breaks on mobile browsers) */
+/* ── MOBILE PHONES & IPHONE (< 768px) ─────────────────────── */
 @media (max-width: 768px) {
-  .app-container {
-    height: auto !important;
-    min-height: 100svh !important;
-    overflow: visible !important;
-    overflow-x: hidden !important;
+  /* Prevent horizontal drag & rubberbanding glitches */
+  html, body {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .spotify-app-layout {
+    height: 100dvh;
+    height: 100vh;
+  }
+
+  /* Hide Desktop Sidebar */
+  .spotify-sidebar {
+    display: none !important;
+  }
+
+  /* Show Mobile Top Header */
+  .mobile-top-header {
     display: flex !important;
-    flex-direction: column !important;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 16px;
+    padding-top: env(safe-area-inset-top, 0px);
+    background: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    z-index: 100;
   }
 
-  .dashboard-wrapper {
-    min-height: 0 !important;
-    overflow: visible !important;
-    flex: 1 !important;
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
   }
 
-  .content-area {
-    overflow: visible !important;
-    flex: 1 !important;
+  .mobile-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mobile-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+
+  /* Content Viewport on Mobile */
+  .spotify-content-viewport {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    height: calc(100dvh - 52px) !important;
+  }
+
+  .spotify-main-scroll {
+    padding: 16px 16px calc(140px + env(safe-area-inset-bottom, 0px)) 16px !important;
+  }
+
+  /* Show Mobile Bottom Navigation Bar */
+  .mobile-bottom-tabs {
+    display: flex !important;
+    justify-content: space-around;
+    align-items: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(18, 18, 18, 0.96);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-color);
+    z-index: 1900;
+  }
+
+  .tab-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1;
+    color: var(--text-subdued);
+    font-size: 0.7rem;
+    font-weight: 600;
+    height: 100%;
+    transition: color 0.15s;
+  }
+
+  .tab-bar-item.active {
+    color: var(--color-accent) !important;
+  }
+
+  /* ── Mobile Floating Mini Player Dock ───────────────────── */
+  .spotify-player-dock.dock-minimized {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 8px) !important;
+    height: 56px !important;
+    border-radius: 8px !important;
+    background: var(--surface-elevated) !important;
+    border: none !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+    z-index: 1950 !important;
+    overflow: hidden;
+  }
+
+  .spotify-bottom-bar {
+    padding: 0 12px !important;
+    gap: 10px;
+  }
+
+  .mini-top-progress {
     display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 2px;
+    background: var(--color-accent);
+    transition: width 0.5s linear;
   }
 
-  /* ----- NAVIGATION BAR ----- */
-  .main-nav {
-    height: auto !important;
-    padding: 10px 14px !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 1000 !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .nav-logo {
-    order: 1;
-    flex: 0 0 auto;
-  }
-
-  .logo-text {
-    font-size: 1rem !important;
-    color: white !important;
-    -webkit-text-fill-color: white !important;
-  }
-
-  .logo-icon-img {
-    width: 32px !important;
-    height: 32px !important;
-  }
-
-  .nav-actions {
-    order: 2;
-    margin-left: auto;
-    flex: 0 0 auto;
-    gap: 8px !important;
-  }
-
-  /* Logout: icon only on mobile */
-  .logout-btn span { display: none !important; }
-  .logout-btn {
-    padding: 8px !important;
-    border-radius: 50% !important;
-    width: 36px !important;
-    height: 36px !important;
-    justify-content: center !important;
-  }
-
-  /* Install/Create: hide text on small nav */
-  .install-btn span, .create-nav-btn span { display: none !important; }
-  .install-btn, .create-nav-btn {
-    padding: 8px !important;
-    border-radius: 50% !important;
-    width: 36px !important;
-    height: 36px !important;
-    justify-content: center !important;
-    margin-right: 0 !important;
-  }
-
-  /* Search bar: full width, row 2 */
-  .header-search-container {
-    order: 3;
-    flex: 1 1 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    height: 42px !important;
-    border-radius: 8px !important;
-  }
-
-  .header-search-input {
-    font-size: 0.95rem !important;
-  }
-
-  /* Nav tabs: scrollable row 3 */
-  .nav-links {
-    order: 4;
-    flex: 1 1 100% !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scrollbar-width: none !important;
-    justify-content: flex-start !important;
-    gap: 4px !important;
-    padding: 3px !important;
-    background: rgba(0,0,0,0.2) !important;
-    border-radius: 10px !important;
-  }
-  .nav-links::-webkit-scrollbar { display: none; }
-
-  .nav-item {
-    padding: 8px 14px !important;
-    flex-shrink: 0 !important;
-    font-size: 0.82rem !important;
-    white-space: nowrap !important;
-    color: rgba(255,255,255,0.75) !important;
-    border-radius: 7px !important;
-    gap: 6px !important;
-  }
-
-  .nav-item.active {
-    background: rgba(255,255,255,0.25) !important;
-    color: #fff !important;
-  }
-
-  /* ----- MAIN CONTENT ----- */
-  .streaming-content-layout {
-    width: 100% !important;
-    overflow-x: hidden !important;
-  }
-
-  .view-scroll {
-    padding: 16px 14px 90px 14px !important; /* bottom padding for mini player */
-    overflow-x: hidden !important;
-  }
-
-  /* ----- DISCOVER HERO ----- */
-  .discover-hero {
-    padding: 22px 20px !important;
-    border-radius: 16px !important;
-    margin-bottom: 24px !important;
-  }
-  .discover-hero h1 {
-    font-size: 1.9rem !important;
-    margin-bottom: 6px !important;
-  }
-  .discover-hero p {
-    font-size: 0.88rem !important;
-    line-height: 1.5 !important;
-  }
-
-  /* ----- SONG GRID ----- */
-  .track-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important;
-    width: 100% !important;
-  }
-
-  .modern-track-card {
-    width: 100% !important;
-    min-width: 0 !important;
-    overflow: hidden !important;
-  }
-
-  /* Always show overlay on mobile (no hover state) */
-  .card-overlay {
-    opacity: 0 !important;
-  }
-
-  .card-title {
-    font-size: 0.8rem !important;
-    -webkit-line-clamp: 2 !important;
-    word-break: break-word !important;
-  }
-
-  .card-author {
-    font-size: 0.7rem !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  .section-group {
-    margin-bottom: 28px !important;
-  }
-
-  .section-group h3 {
-    font-size: 1.05rem !important;
-    font-weight: 800 !important;
-    margin-bottom: 14px !important;
-  }
-
-  /* ----- MODALS: slide up from bottom ----- */
-  .modal-overlay {
-    padding: 0 !important;
-    align-items: flex-end !important;
-  }
-
-  .playlist-modal {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    border-radius: 24px 24px 0 0 !important;
-    padding: 28px 20px 40px !important;
-    max-height: 80vh !important;
-    overflow-y: auto !important;
-  }
-
-  .modal-header h3 {
-    font-size: 1.2rem !important;
-  }
-
-  .premium-input, .url-input {
-    font-size: 1rem !important;
-    padding: 14px 16px !important;
-    border-radius: 12px !important;
-  }
-
-  .sync-btn, .load-btn {
-    font-size: 1rem !important;
-    padding: 14px !important;
-  }
-
-  .modal-list button {
-    font-size: 0.95rem !important;
-    padding: 14px 16px !important;
-    width: 100% !important;
-    text-align: left !important;
-  }
-
-  /* ----- SYNC TOOL OVERLAY ----- */
-  .sync-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    display: flex !important;
-    align-items: flex-end !important;
-    z-index: 1500 !important;
-    background: rgba(0,0,0,0.5) !important;
-  }
-
-  .sync-content-wrapper {
-    width: 100% !important;
-    max-width: 100% !important;
-    border-radius: 24px 24px 0 0 !important;
-    max-height: 90vh !important;
-    overflow-y: auto !important;
-    padding: 24px 20px 40px !important;
-  }
-
-  .sync-layout {
-    flex-direction: column !important;
-  }
-
-  /* ----- MINI PLAYER (persistent bottom bar) ----- */
-  .persistent-bottom-player {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    z-index: 2000 !important;
-  }
-
-  .persistent-bottom-player.minimized {
-    height: 68px !important;
-    border-top: 1px solid #eee !important;
-    background: white !important;
-  }
-
-  .mini-player-layout {
-    padding: 0 14px !important;
-    height: 68px !important;
-    gap: 10px !important;
-    cursor: pointer !important;
-  }
-
-  .mini-thumb {
-    width: 46px !important;
-    height: 46px !important;
-    border-radius: 8px !important;
-    flex-shrink: 0 !important;
-  }
-
-  .mini-info {
-    flex: 1 !important;
-    min-width: 0 !important;
-  }
-
-  .mini-title {
-    font-size: 0.85rem !important;
-    font-weight: 700 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    max-width: 100% !important;
-  }
-
-  .mini-artist {
-    font-size: 0.72rem !important;
-    color: #777 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  .mini-actions {
-    display: flex !important;
-    gap: 4px !important;
-    flex-shrink: 0 !important;
-  }
-
-  .mini-btn {
+  .bar-thumb {
     width: 40px !important;
     height: 40px !important;
-    border: none !important;
-    background: none !important;
-    cursor: pointer !important;
-    color: #333 !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    border-radius: 4px !important;
   }
 
-  /* ----- EXPANDED FULL PLAYER ----- */
-  .persistent-bottom-player.expanded {
-    height: 100svh !important;
+  .bar-thumb-placeholder {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .bar-title {
+    font-size: 0.85rem !important;
+    max-width: 170px !important;
+  }
+
+  .bar-artist {
+    font-size: 0.72rem !important;
+    max-width: 170px !important;
+  }
+
+  /* Hide Desktop Player Center & Right on Mobile */
+  .bar-center-controls,
+  .bar-right-actions,
+  .bar-heart-btn {
+    display: none !important;
+  }
+
+  .bar-track-info {
+    width: auto !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  /* Mobile Quick Controls */
+  .bar-mobile-controls {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .mobile-play-btn, .mobile-next-btn {
+    color: var(--text-primary);
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Mobile Full Expanded Player ───────────────────────── */
+  .spotify-player-dock.dock-expanded {
+    height: 100dvh !important;
+    height: 100vh !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
     border-radius: 0 !important;
-    overflow-y: auto !important; /* Allow the drawer to scroll if content is tall */
-    -webkit-overflow-scrolling: touch;
+    z-index: 2500 !important;
   }
 
   .full-player-layout {
-    padding: max(20px, env(safe-area-inset-top)) 20px max(130px, env(safe-area-inset-bottom) + 80px) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 10px !important;
-    min-height: 100dvh !important;
-    height: auto !important; 
-    box-sizing: border-box !important;
+    padding: 16px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px !important;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px)) !important;
   }
 
-  .full-header {
-    flex-shrink: 0 !important;
+  .artwork-stage {
+    max-width: 290px !important;
+    margin-bottom: 24px !important;
   }
 
-  .player-mode-toggle {
-    font-size: 0.72rem !important;
-    padding: 5px 10px !important;
+  .full-title {
+    font-size: 1.35rem !important;
   }
 
-  .audio-visual-content {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-    justify-content: flex-start !important; /* Start from top to avoid pushing controls off-screen */
-    gap: 20px !important;
-    padding-top: 10px !important;
+  .full-artist {
+    font-size: 0.95rem !important;
   }
 
-  .album-art-section {
-    display: flex !important;
-    justify-content: center !important;
-  }
-
-  .full-album-art {
-    width: min(200px, 60vw) !important; /* Slightly smaller to fit more content */
-    height: min(200px, 60vw) !important;
-    border-radius: 16px !important;
-    display: block !important;
-    margin: 0 auto !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
-  }
-
-  .full-art-placeholder {
-    width: min(240px, 72vw) !important;
-    height: min(240px, 72vw) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 0 auto !important;
-    border-radius: 16px !important;
-    background: rgba(0,0,0,0.05) !important;
-  }
-
-  .track-meta-section {
-    text-align: center !important;
-  }
-
-  .full-track-title {
-    font-size: 1.25rem !important;
-    line-height: 1.3 !important;
-    margin-bottom: 4px !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
-    -webkit-box-orient: vertical !important;
-    overflow: hidden !important;
-    max-height: 3.4em !important;
-  }
-
-  .full-track-artist {
-    font-size: 0.9rem !important;
-  }
-
-  .full-controls-section {
-    flex-shrink: 0 !important;
-  }
-
-  .full-progress-container {
-    gap: 8px !important;
+  .full-player-header {
     margin-bottom: 16px !important;
   }
 
-  .premium-range-slider {
-    flex: 1 !important;
-    height: 4px !important;
-    cursor: pointer !important;
+  /* ── Home Page Mobile Adjustments ───────────────────────── */
+  .hero-greeting {
+    font-size: 1.6rem !important;
   }
 
-  .time-label {
-    font-size: 0.75rem !important;
-    flex-shrink: 0 !important;
+  .quick-access-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    margin-bottom: 24px !important;
   }
 
-  .full-actions {
-    display: flex !important;
+  .quick-card {
+    height: 48px !important;
+  }
+
+  .quick-card-img {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .quick-card-title {
+    font-size: 0.8rem !important;
+    padding-right: 8px !important;
+  }
+
+  .quick-play-btn {
+    display: none !important;
+  }
+
+  .spotify-card-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .card-play-btn {
+    opacity: 0 !important;
+  }
+
+  /* ── Tracklist Mobile Adjustments ───────────────────────── */
+  .tracklist-header-row {
+    display: none !important;
+  }
+
+  .tracklist-row {
+    grid-template-columns: 32px 1fr 36px !important;
+    padding: 8px 4px !important;
+  }
+
+  .col-artist {
+    display: none !important;
+  }
+
+  .row-mobile-artist {
+    display: block !important;
+  }
+
+  .row-action-btn {
+    opacity: 1 !important;
+  }
+
+  /* ── Playlist Detail Hero Mobile ────────────────────────── */
+  .playlist-hero-banner {
+    flex-direction: column !important;
     align-items: center !important;
-    justify-content: space-between !important; /* Spread them out */
-    width: 100% !important;
-    max-width: 340px !important;
-    margin: 0 auto !important;
-    gap: 10px !important;
+    text-align: center !important;
+    gap: 16px !important;
+    padding: 10px 0 16px !important;
   }
 
-  .play-pause-circle {
-    width: 64px !important;
-    height: 64px !important;
+  .playlist-hero-art {
+    width: 160px !important;
+    height: 160px !important;
   }
 
-  .main-btns {
-    display: flex !important;
-    align-items: center !important;
-    gap: 16px !important; /* Adjusted gap */
-    flex-shrink: 0 !important;
+  .hero-title {
+    font-size: 1.8rem !important;
   }
 
-  .nav-btn {
-    background: none !important;
-    border: none !important;
-    cursor: pointer !important;
-    color: white !important;
-    display: flex !important;
-    align-items: center !important;
+  .hero-stats {
     justify-content: center !important;
+  }
+
+  .playlist-action-bar {
+    justify-content: space-between !important;
+  }
+
+  /* ── Search Page Mobile ─────────────────────────────────── */
+  .search-results-layout {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .browse-category-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  .category-tile {
+    height: 110px !important;
+  }
+
+  .category-tile-title {
+    font-size: 1rem !important;
+  }
+
+  /* ── Sync Modal Mobile ──────────────────────────────────── */
+  .spotify-sync-overlay {
+    padding: 10px !important;
+  }
+
+  .spotify-sync-container-inner {
+    max-height: 94vh !important;
+  }
+
+  .sync-workflow-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .url-bar-group {
+    flex-direction: column !important;
+  }
+
+  .spotify-accent-btn {
+    width: 100% !important;
+  }
+
+  /* ── Landing Page Mobile ────────────────────────────────── */
+  .landing-glass-card {
+    padding: 28px 20px !important;
+  }
+
+  .landing-main-title {
+    font-size: 1.8rem !important;
+  }
+
+  .landing-feature-pills {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
   }
 }
 
-/* ── Very small phones (<=390px) ─────────────────────── */
-@media (max-width: 390px) {
-  .nav-item span { display: none !important; }
-  .nav-item { padding: 10px 12px !important; }
-
-  .track-grid {
-    gap: 10px !important;
+/* ── LARGE SCREENS & TV (> 1600px) ────────────────────────── */
+@media (min-width: 1600px) {
+  :root {
+    --sidebar-width: 280px;
+    --player-height: 96px;
   }
 
-  .full-album-art {
-    width: min(200px, 75vw) !important;
-    height: min(200px, 75vw) !important;
+  .spotify-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
   }
 
-  .full-track-title {
-    font-size: 1.1rem !important;
+  .browse-category-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+
+  .hero-title {
+    font-size: 4rem;
+  }
+
+  .playlist-hero-art {
+    width: 260px;
+    height: 260px;
   }
 }

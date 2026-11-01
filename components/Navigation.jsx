@@ -1,15 +1,29 @@
-import { useState, useEffect } from 'react';
-import { Home, RefreshCw, LogOut, Search as SearchIcon, Download, Smartphone, Heart, Library, PlusSquare } from 'lucide-react';
+"use client";
 
-export default function Navigation({ activeTab, onTabChange, onLogout, onSearch, searchQuery }) {
+import { useState, useEffect } from 'react';
+import { 
+  Home, 
+  Search as SearchIcon, 
+  Library, 
+  Heart, 
+  PlusSquare, 
+  RefreshCw, 
+  LogOut, 
+  Download, 
+  Smartphone,
+  Music2
+} from 'lucide-react';
+
+export default function Navigation({ activeTab, onTabChange, onLogout, onOpenCreatePlaylist }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Detect iOS — covers Safari, Chrome, Brave, Firefox on iOS (all use WebKit)
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad with desktop UA
+    const isIOSDevice = typeof navigator !== 'undefined' && (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
     setIsIOS(isIOSDevice);
 
     const handleBeforeInstallPrompt = (e) => {
@@ -17,19 +31,14 @@ export default function Navigation({ activeTab, onTabChange, onLogout, onSearch,
       setDeferredPrompt(e);
       setIsInstallable(true);
     };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
   const handleInstallClick = async () => {
     if (isIOS) {
-      // On iOS, only Safari supports Add to Home Screen
-      const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|brave/i.test(navigator.userAgent);
-      if (isSafari) {
-        alert('Tap the Share button (box with arrow) at the bottom, then tap "Add to Home Screen".');
-      } else {
-        alert('To install this app on iOS:\n\n1. Open this page in Safari\n2. Tap the Share button (box with arrow)\n3. Tap "Add to Home Screen"\n\nNote: Only Safari supports installing web apps on iOS.');
-      }
+      alert('To install this app on iPhone / iPad:\n\n1. Tap the Share button (square with arrow up)\n2. Scroll down and tap "Add to Home Screen"\n3. Enjoy full-screen music without address bar!');
       return;
     }
     if (!deferredPrompt) return;
@@ -40,52 +49,154 @@ export default function Navigation({ activeTab, onTabChange, onLogout, onSearch,
   };
 
   return (
-    <nav className="main-nav">
-      <div className="nav-logo" onClick={() => onTabChange('player')} style={{cursor: 'pointer'}}>
-        <img src="/logo.png" className="logo-icon-img" alt="Logo" />
-        {/* <span className="logo-text">Music Sync</span> */}
-      </div>
+    <>
+      {/* ── DESKTOP & TABLET SPOTIFY SIDEBAR ── */}
+      <aside className="spotify-sidebar">
+        <div className="sidebar-brand" onClick={() => onTabChange('player')}>
+          <div className="brand-logo-circle">
+            <Music2 size={24} color="#000000" />
+          </div>
+          <span className="brand-title">Music Sync</span>
+        </div>
 
-      <div className="header-search-container">
-        <SearchIcon size={18} className="search-icon" />
-        <input 
-          type="text" 
-          placeholder="Search songs, albums, artists..." 
-          value={searchQuery}
-          onChange={(e) => onSearch(e.target.value)}
-          className="header-search-input"
-        />
-      </div>
-      
-      <div className="nav-links">
-        <button className={`nav-item ${activeTab === 'player' ? 'active' : ''}`} onClick={() => onTabChange('player')}>
-          <Home size={20} /> <span>Home</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'library' ? 'active' : ''}`} onClick={() => onTabChange('library')}>
-          <Library size={20} /> <span>Playlists</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'liked' ? 'active' : ''}`} onClick={() => onTabChange('liked')}>
-          <Heart size={20} /> <span>Liked</span>
-        </button>
-        <button className={`nav-item create-nav-btn`} onClick={() => onTabChange('create')}>
-          <PlusSquare size={20} /> <span>Create</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'sync' ? 'active' : ''}`} onClick={() => onTabChange('sync')}>
-          <RefreshCw size={20} /> <span>Sync Tool</span>
-        </button>
-      </div>
-
-      <div className="nav-actions">
-        {(isInstallable || isIOS) && (
-          <button className="install-btn" onClick={handleInstallClick}>
-            {isIOS ? <Smartphone size={18} /> : <Download size={18} />}
-            <span>{isIOS ? 'App Info' : 'Install'}</span>
+        <nav className="sidebar-nav-group">
+          <button 
+            className={`sidebar-nav-item ${activeTab === 'player' ? 'active' : ''}`}
+            onClick={() => onTabChange('player')}
+          >
+            <Home size={22} />
+            <span>Home</span>
           </button>
-        )}
-        <button className="logout-btn" onClick={onLogout}>
-          <LogOut size={18} /> <span>Logout</span>
+
+          <button 
+            className={`sidebar-nav-item ${activeTab === 'search' ? 'active' : ''}`}
+            onClick={() => onTabChange('search')}
+          >
+            <SearchIcon size={22} />
+            <span>Search</span>
+          </button>
+
+          <button 
+            className={`sidebar-nav-item ${activeTab === 'library' ? 'active' : ''}`}
+            onClick={() => onTabChange('library')}
+          >
+            <Library size={22} />
+            <span>Your Library</span>
+          </button>
+        </nav>
+
+        <div className="sidebar-divider" />
+
+        <div className="sidebar-secondary-group">
+          <button 
+            className="sidebar-secondary-item"
+            onClick={onOpenCreatePlaylist}
+          >
+            <div className="secondary-icon-box create-box">
+              <PlusSquare size={16} />
+            </div>
+            <span>Create Playlist</span>
+          </button>
+
+          <button 
+            className={`sidebar-secondary-item ${activeTab === 'liked' ? 'active' : ''}`}
+            onClick={() => onTabChange('liked')}
+          >
+            <div className="secondary-icon-box liked-box">
+              <Heart size={14} fill="#FFFFFF" color="#FFFFFF" />
+            </div>
+            <span>Liked Songs</span>
+          </button>
+
+          <button 
+            className={`sidebar-secondary-item sync-item ${activeTab === 'sync' ? 'active' : ''}`}
+            onClick={() => onTabChange('sync')}
+          >
+            <div className="secondary-icon-box sync-box">
+              <RefreshCw size={14} />
+            </div>
+            <span>Spotify Sync Tool</span>
+          </button>
+        </div>
+
+        <div className="sidebar-footer">
+          {(isInstallable || isIOS) && (
+            <button className="sidebar-install-btn" onClick={handleInstallClick}>
+              {isIOS ? <Smartphone size={18} /> : <Download size={18} />}
+              <span>{isIOS ? 'Install on iPhone' : 'Install App'}</span>
+            </button>
+          )}
+
+          <button className="sidebar-logout-btn" onClick={onLogout} title="Sign Out">
+            <LogOut size={18} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MOBILE TOP HEADER ── */}
+      <header className="mobile-top-header">
+        <div className="mobile-brand" onClick={() => onTabChange('player')}>
+          <div className="brand-logo-circle small">
+            <Music2 size={18} color="#000000" />
+          </div>
+          <span className="brand-title">Music Sync</span>
+        </div>
+
+        <div className="mobile-top-actions">
+          {(isInstallable || isIOS) && (
+            <button className="mobile-icon-btn" onClick={handleInstallClick} title="Install App">
+              {isIOS ? <Smartphone size={18} /> : <Download size={18} />}
+            </button>
+          )}
+          <button className="mobile-icon-btn" onClick={onLogout} title="Sign Out">
+            <LogOut size={18} />
+          </button>
+        </div>
+      </header>
+
+      {/* ── MOBILE BOTTOM TAB BAR ── */}
+      <nav className="mobile-bottom-tabs">
+        <button 
+          className={`tab-bar-item ${activeTab === 'player' ? 'active' : ''}`}
+          onClick={() => onTabChange('player')}
+        >
+          <Home size={22} />
+          <span>Home</span>
         </button>
-      </div>
-    </nav>
+
+        <button 
+          className={`tab-bar-item ${activeTab === 'search' ? 'active' : ''}`}
+          onClick={() => onTabChange('search')}
+        >
+          <SearchIcon size={22} />
+          <span>Search</span>
+        </button>
+
+        <button 
+          className={`tab-bar-item ${activeTab === 'library' ? 'active' : ''}`}
+          onClick={() => onTabChange('library')}
+        >
+          <Library size={22} />
+          <span>Library</span>
+        </button>
+
+        <button 
+          className={`tab-bar-item ${activeTab === 'liked' ? 'active' : ''}`}
+          onClick={() => onTabChange('liked')}
+        >
+          <Heart size={22} fill={activeTab === 'liked' ? '#1DB954' : 'none'} />
+          <span>Liked</span>
+        </button>
+
+        <button 
+          className={`tab-bar-item ${activeTab === 'sync' ? 'active' : ''}`}
+          onClick={() => onTabChange('sync')}
+        >
+          <RefreshCw size={22} />
+          <span>Sync</span>
+        </button>
+      </nav>
+    </>
   );
 }
