@@ -47,7 +47,6 @@ export default function CarPlayUI({
   currentPlayingId,
   isPlaying
 }) {
-  const [view, setView] = useState('discover'); // 'discover' | 'search' | 'library' | 'tracks' | 'liked'
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [tracks, setTracks] = useState([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState(false);
@@ -57,7 +56,15 @@ export default function CarPlayUI({
   const [searchFilter, setSearchFilter] = useState('all'); // 'all' | 'songs' | 'playlists'
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [recentSearches, setRecentSearches] = useState([]);
+  const [recentSearches, setRecentSearches] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = JSON.parse(localStorage.getItem('recent_search_queries') || '[]');
+        if (Array.isArray(saved)) return saved;
+      } catch {}
+    }
+    return [];
+  });
 
   // Modals & Playlists
   const [addingVideoId, setAddingVideoId] = useState(null);
@@ -72,35 +79,18 @@ export default function CarPlayUI({
   const [likedVideos, setLikedVideos] = useState([]);
   const [isLoadingHome, setIsLoadingHome] = useState(false);
 
-  // Load recent searches from localStorage
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('recent_search_queries') || '[]');
-      if (Array.isArray(saved)) setRecentSearches(saved);
-    } catch {}
-  }, []);
-
-  // Sync tab changes from parent navigation
-  useEffect(() => {
-    if (activeTab === 'library') setView('library');
-    else if (activeTab === 'liked') setView('liked');
-    else if (activeTab === 'search') setView('search');
-    else if (activeTab === 'player') setView('discover');
-  }, [activeTab]);
-
   // Handle browser back button (popstate) so music NEVER stops
   useEffect(() => {
-    const handlePopState = (e) => {
-      if (view === 'tracks') {
-        setView('library');
+    const handlePopState = () => {
+      if (selectedPlaylist) {
         setSelectedPlaylist(null);
-      } else if (view === 'search' && activeTab !== 'search') {
-        setView('discover');
+      } else if (activeTab !== 'player') {
+        onTabChange('player');
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [view, activeTab]);
+  }, [selectedPlaylist, activeTab, onTabChange]);
 
   // Fetch Home content
   useEffect(() => {
@@ -154,14 +144,14 @@ export default function CarPlayUI({
     };
 
     fetchHomeContent();
-  }, [youtubeToken]);
+  }, [youtubeToken, onTabChange]);
 
   // Fetch playlist tracks
   const loadPlaylistTracks = useCallback(async (playlist) => {
     if (!playlist?.id || !youtubeToken) return;
     setIsLoadingTracks(true);
     setSelectedPlaylist(playlist);
-    setView('tracks');
+    onTabChange('library');
 
     // Push history state so back button returns to library without page reload
     window.history.pushState({ view: 'tracks', playlistId: playlist.id }, '');
@@ -178,7 +168,7 @@ export default function CarPlayUI({
     } finally {
       setIsLoadingTracks(false);
     }
-  }, [youtubeToken]);
+  }, [youtubeToken, onTabChange]);
 
   // Debounced search logic
   const performSearch = useCallback(async (query, filterType = searchFilter) => {
@@ -281,7 +271,8 @@ export default function CarPlayUI({
       setNewPlaylistName('');
       setIsCreatingPlaylist(false);
       if (onRefreshPlaylists) onRefreshPlaylists();
-      setView('library');
+      setSelectedPlaylist(null);
+      onTabChange('library');
     } catch (e) {
       alert('Failed to create playlist. Please try again.');
     } finally {
@@ -459,7 +450,7 @@ export default function CarPlayUI({
         {/* ══════════════════════════════════════════
             VIEW: DISCOVER (HOME)
             ══════════════════════════════════════════ */}
-        {view === 'discover' && (
+        {activeTab === 'player' && (
           <div className="view-discover-page">
             <header className="discover-hero-header">
               <h1 className="hero-greeting">{getGreeting()}</h1>
@@ -528,7 +519,7 @@ export default function CarPlayUI({
         {/* ══════════════════════════════════════════
             VIEW: SEARCH
             ══════════════════════════════════════════ */}
-        {view === 'search' && (
+        {activeTab === 'search' && (
           <div className="view-search-page">
             <div className="search-top-bar">
               <div className="search-input-field-wrap">
@@ -695,7 +686,7 @@ export default function CarPlayUI({
 
             {!isSearching && localSearchQuery && searchResults.length === 0 && (
               <div className="no-search-results">
-                <h3>No results found for "{localSearchQuery}"</h3>
+                <h3>No results found for &quot;{localSearchQuery}&quot;</h3>
                 <p>Please check your spelling or try different keywords.</p>
               </div>
             )}
@@ -705,7 +696,7 @@ export default function CarPlayUI({
         {/* ══════════════════════════════════════════
             VIEW: LIBRARY (PLAYLISTS)
             ══════════════════════════════════════════ */}
-        {view === 'library' && (
+        {activeTab === 'library' && !selectedPlaylist && (
           <div className="view-library-page">
             <div className="library-header-row">
               <h1>Your Library</h1>
@@ -739,12 +730,11 @@ export default function CarPlayUI({
         {/* ══════════════════════════════════════════
             VIEW: TRACKS (PLAYLIST DETAIL)
             ══════════════════════════════════════════ */}
-        {view === 'tracks' && selectedPlaylist && (
+        {activeTab === 'library' && selectedPlaylist && (
           <div className="view-tracks-page">
             <button 
               className="spotify-back-link"
               onClick={() => {
-                setView('library');
                 setSelectedPlaylist(null);
               }}
             >
@@ -808,7 +798,7 @@ export default function CarPlayUI({
         {/* ══════════════════════════════════════════
             VIEW: LIKED SONGS
             ══════════════════════════════════════════ */}
-        {view === 'liked' && (
+        {activeTab === 'liked' && (
           <div className="view-liked-page">
             {/* Spotify Liked Songs Gradient Banner */}
             <div className="playlist-hero-banner liked-hero-gradient">
