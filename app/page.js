@@ -14,11 +14,21 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [youtubeToken, setYoutubeToken] = useState(null);
+  const [youtubeToken, setYoutubeToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('youtube_token') || null;
+    }
+    return null;
+  });
   const [existingPlaylists, setExistingPlaylists] = useState([]);
   const [activeTab, setActiveTab] = useState('player'); // 'player' | 'search' | 'library' | 'liked' | 'sync'
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('youtube_token');
+    }
+    return true;
+  });
 
   // GLOBAL PERSISTENT PLAYER STATE
   const [activeVideoId, setActiveVideoId] = useState(null);
@@ -30,8 +40,6 @@ function DashboardContent() {
   // Restore or initialize authentication from URL, localStorage, or server SQLite session
   useEffect(() => {
     const initAuth = async () => {
-      setAuthLoading(true);
-
       // Check if tokens were returned in callback URL
       const urlToken = searchParams.get('youtube_access_token');
       const urlRefresh = searchParams.get('youtube_refresh_token');
@@ -43,6 +51,7 @@ function DashboardContent() {
         if (urlExpiry) localStorage.setItem('youtube_token_expiry', urlExpiry);
 
         setYoutubeToken(urlToken);
+        setAuthLoading(false);
 
         // Sync to server SQLite session
         try {
@@ -56,7 +65,6 @@ function DashboardContent() {
         }
 
         router.replace('/');
-        setAuthLoading(false);
         return;
       }
 

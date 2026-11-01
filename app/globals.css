@@ -417,6 +417,44 @@ a {
   color: var(--color-accent);
 }
 
+/* ── Skeleton Loading Shimmer (Zero CLS) ───────────────── */
+@keyframes shimmerPulse {
+  0% { opacity: 0.45; background-position: -200% 0; }
+  50% { opacity: 0.85; }
+  100% { opacity: 0.45; background-position: 200% 0; }
+}
+
+.skeleton-box {
+  background: linear-gradient(90deg, #181818 25%, #282828 50%, #181818 75%);
+  background-size: 200% 100%;
+  animation: shimmerPulse 1.6s infinite ease-in-out;
+  border-radius: 6px;
+  aspect-ratio: 1;
+  width: 100%;
+}
+
+.skeleton-line {
+  background: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%);
+  background-size: 200% 100%;
+  animation: shimmerPulse 1.6s infinite ease-in-out;
+  border-radius: 4px;
+}
+
+.skeleton-line.title {
+  height: 14px;
+  width: 80%;
+  margin-bottom: 6px;
+}
+
+.skeleton-line.artist {
+  height: 11px;
+  width: 50%;
+}
+
+.skeleton-grid {
+  pointer-events: none;
+}
+
 /* ── Spotify Card Grid ──────────────────────────────────── */
 .spotify-card-grid {
   display: grid;

@@ -75,7 +75,15 @@ export default function CarPlayUI({
   // Home content
   const [trendingIndia, setTrendingIndia] = useState([]);
   const [trendingGlobal, setTrendingGlobal] = useState([]);
-  const [recentlyPlayed, setRecentlyPlayed] = useState([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = JSON.parse(localStorage.getItem('cached_recently_played_items') || '[]');
+        if (Array.isArray(cached) && cached.length > 0) return cached;
+      } catch {}
+    }
+    return [];
+  });
   const [likedVideos, setLikedVideos] = useState([]);
   const [isLoadingHome, setIsLoadingHome] = useState(false);
 
@@ -134,7 +142,11 @@ export default function CarPlayUI({
             part: 'snippet,contentDetails',
             id: recentIds.slice(0, 10).join(',')
           });
-          setRecentlyPlayed(recRes.data.items || []);
+          const items = recRes.data.items || [];
+          setRecentlyPlayed(items);
+          try {
+            localStorage.setItem('cached_recently_played_items', JSON.stringify(items));
+          } catch {}
         }
       } catch (e) {
         console.warn('Error loading home content:', e);
@@ -305,6 +317,21 @@ export default function CarPlayUI({
     if (hours < 18) return 'Good afternoon';
     return 'Good evening';
   };
+
+  // Zero-CLS Shimmer Skeletons
+  const renderSkeletons = (count = 6) => (
+    <div className="spotify-card-grid skeleton-grid">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={'skel-' + i} className="spotify-card skeleton-card">
+          <div className="card-artwork-wrapper skeleton-box" />
+          <div className="card-metadata" style={{ marginTop: '8px' }}>
+            <div className="skeleton-line title" />
+            <div className="skeleton-line artist" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   // Renders Spotify-style Track Cards (Square tiles with hover Play button)
   const renderCardGrid = (items, isPlaylist = false) => {
@@ -496,7 +523,7 @@ export default function CarPlayUI({
                 <h2>Trending in India</h2>
               </div>
               {isLoadingHome && trendingIndia.length === 0 ? (
-                <div className="shelf-loading"><Loader2 className="animate-spin" size={32} /></div>
+                renderSkeletons(6)
               ) : (
                 renderCardGrid(trendingIndia)
               )}
@@ -508,7 +535,7 @@ export default function CarPlayUI({
                 <h2>Global Top Hits</h2>
               </div>
               {isLoadingHome && trendingGlobal.length === 0 ? (
-                <div className="shelf-loading"><Loader2 className="animate-spin" size={32} /></div>
+                renderSkeletons(6)
               ) : (
                 renderCardGrid(trendingGlobal)
               )}

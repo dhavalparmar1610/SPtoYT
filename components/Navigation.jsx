@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   Home, 
   Search as SearchIcon, 
-  Library, 
+  ListMusic, 
   Heart, 
   PlusSquare, 
   RefreshCw, 
@@ -82,7 +82,7 @@ export default function Navigation({ activeTab, onTabChange, onLogout, onOpenCre
             className={`sidebar-nav-item ${activeTab === 'library' ? 'active' : ''}`}
             onClick={() => onTabChange('library')}
           >
-            <Library size={22} />
+            <ListMusic size={22} />
             <span>Your Library</span>
           </button>
         </nav>
@@ -179,7 +179,7 @@ export default function Navigation({ activeTab, onTabChange, onLogout, onOpenCre
           className={`tab-bar-item ${activeTab === 'library' ? 'active' : ''}`}
           onClick={() => onTabChange('library')}
         >
-          <Library size={22} />
+          <ListMusic size={22} />
           <span>Library</span>
         </button>
 
