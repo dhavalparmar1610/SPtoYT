@@ -92,10 +92,20 @@ function DashboardContent() {
   }, [youtubeToken]);
 
   useEffect(() => {
+    let isMounted = true;
     if (youtubeToken) {
-      fetchPlaylists();
+      youtubeGet('https://www.googleapis.com/youtube/v3/playlists', {
+        part: 'snippet,contentDetails',
+        mine: true,
+        maxResults: 50
+      })
+      .then(res => {
+        if (isMounted) setExistingPlaylists(res.data.items || []);
+      })
+      .catch(err => console.warn('Failed to fetch playlists:', err));
     }
-  }, [youtubeToken, fetchPlaylists]);
+    return () => { isMounted = false; };
+  }, [youtubeToken]);
 
   const handleLogout = async () => {
     localStorage.removeItem('youtube_token');

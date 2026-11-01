@@ -303,7 +303,7 @@ export default function PlaylistSync({ youtubeToken, onPlaylistSynced, onClose }
                   disabled={syncState.isSyncing} 
                   className="spotify-select-input"
                 >
-                  <option value="new">[+] Create New Playlist: "{playlistInfo.name}"</option>
+                  <option value="new">[+] Create New Playlist: &quot;{playlistInfo.name}&quot;</option>
                   {existingPlaylists.map(p => (
                     <option key={p.id} value={p.id}>
                       Existing: {p.snippet?.title}
