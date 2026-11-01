@@ -40,6 +40,9 @@ yarn-error.log*
 # vercel
 .vercel
 
-# typescript
+# local database / session files
+/data/*.sqlite
+/data/*.json
+/data
 *.tsbuildinfo
 next-env.d.ts
